@@ -21,6 +21,16 @@ The `usdc_increment_50ms_factor` param is the factor by which the balance increa
 
 **NOTE** it takes at least 2 indexed blocks with an active position before an APY is calculated
 
+## Get started
+
+Use python 3, install requirements
+
+Create empty postgres database
+
+Call `python database.py` to initialize
+
+Call `python app.py` to start service
+
 ## .env
 
 ```
