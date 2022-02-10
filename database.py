@@ -72,6 +72,22 @@ class StakingPositions(Base):
         factor = usdc / self.usdc
         return usdc, factor
 
+    def to_dict(self):
+        """Converts object to dict.
+        @return: dict
+        """
+        d = {}
+        for column in self.__table__.columns:
+            data = getattr(self, column.name)
+            d[column.name] = data
+        return d
+
+    def to_json(self):
+        """Converts object to JSON.
+        @return: JSON data
+        """
+        return json.dumps(self.to_dict(), default=str)
+
 # Single row
 class StakingPositionsMeta(Base):
     __tablename__ = 'staking_positions_meta'
@@ -79,8 +95,6 @@ class StakingPositionsMeta(Base):
     id = Column(Integer, primary_key=True, default=1)
     usdc_last_updated = Column(TIMESTAMP, nullable=False, default=datetime.min)
     usdc_last_updated_block = Column(Integer, nullable=False, default=0)
-    # apy_human = Column(Float, nullable=False, default=0)
-    # apy_50ms_factor = Column(NUMERIC(79, 78), nullable=False, default=0)
 
     @staticmethod
     def get(session):

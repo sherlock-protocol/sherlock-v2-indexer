@@ -31,4 +31,4 @@ with open(os.path.join(REPO, 'artifacts', 'contracts', 'Sherlock.sol', 'Sherlock
 CORE_WSS = WEB3_WSS.eth.contract(address=CORE_ADDRESS, abi=CORE_ABI)
 
 INDEXER_BLOCKS_PER_CALL = 5
-INDEXER_SLEEP_BETWEEN_CALL = 0.1
+INDEXER_SLEEP_BETWEEN_CALL = config('INDEXER_SLEEP_BETWEEN_CALL', default=5.0, cast=float)

@@ -9,6 +9,7 @@ from threading import Thread
 from flask import Flask
 
 from indexer import Indexer
+indexer = Indexer()
 
 from web3 import Web3
 
@@ -22,19 +23,17 @@ def positions(user):
             "error": "Argument should be checksummed address"
         }
 
-
     with database.Session() as s:
         positions = database.StakingPositions.get(s, user)
 
     for pos in positions:
-        pos.usdc *= 
+        pos.usdc = round(pos.usdc * indexer.balance_factor)
 
-    for pos in positions:
-        print(pos.usdc)
-    print(positions)
     return {
         "ok": True,
-        # "data": positions
+        "usdc_apy": indexer.apy,
+        "usdc_increment_50ms_factor": indexer.apy_50ms_factor,
+        "data": [x.to_dict() for x in positions]
     }
 
 threads = []
@@ -51,7 +50,6 @@ def interrupt():
     signal_handler(None, None)
 
 def create_app():
-    indexer = Indexer()
     thread = Thread(name="Indexer started", target=indexer.start)
     threads.append(thread)
     thread.start()

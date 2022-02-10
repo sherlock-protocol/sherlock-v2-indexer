@@ -15,10 +15,9 @@ getcontext().prec = 78
 
 class Indexer:
     def __init__(self):
-        # Maybe do this instead of db?
         self.block_last_updated = 0
         self.balance_factor = Decimal(1) # if 1.0, database value is correct, if 1.1, database value is 10% less than reality
-        self.apy = 0.0 # Float apy e.g. 3.54
+        self.apy = 0.0 # User friendly apy e.g. 3.54 --> 3.54% per year
         self.apy_50ms_factor = 0.0 # Do * balance to get apy increase
         self.events = {
             settings.CORE_WSS.events.Transfer: self.Transfer.new,
@@ -46,7 +45,7 @@ class Indexer:
         apy = YEAR / Decimal(position_timedelta) * (factor - 1)
 
         self.balance_factor = factor
-        # If no payout has occured since the last check
+        # If no payout has occured since the last loop
         if apy > 0.0:
             self.apy = round(apy * 100, 2)
             self.apy_50ms_factor = apy / YEAR / 60 / 60 / 60 / 20
