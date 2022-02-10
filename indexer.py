@@ -17,14 +17,12 @@ class Indexer:
     def __init__(self):
         self.block_last_updated = 0
         self.time_last_updated = 0
-        self.balance_factor = Decimal(1) # if 1.0, database value is correct, if 1.1, database value is 10% less than reality
+        self.balance_factor = Decimal(0) # if 1.0, database value is correct, if 1.1, database value is 10% less than reality
         self.apy = 0.0 # User friendly apy e.g. 3.54 --> 3.54% per year
         self.apy_50ms_factor = 0.0 # Do * balance to get apy increase
         self.events = {
             settings.CORE_WSS.events.Transfer: self.Transfer.new,
         }
-
-        self._first_run = True
 
     # Also get called after listening to events with `end_block`
     def calc_factors(self, session, block):
@@ -68,12 +66,11 @@ class Indexer:
 
             # Update all database entries to be up to date with block
             self.calc_factors(session, block)
-            if self.balance_factor != Decimal(1) or self._first_run:
+            if self.balance_factor != Decimal(1):
                 database.StakingPositionsMeta.update(
                     session, block, self.balance_factor
                 )
                 self.balance_factor = Decimal(1)
-                self.__first_run = False
 
             # Insert will retrieve active information (usdc, sher, lockup)
             database.StakingPositions.insert(
