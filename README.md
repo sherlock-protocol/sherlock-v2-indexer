@@ -19,6 +19,8 @@ The `usdc_increment_50ms_factor` param is the factor by which the balance increa
 
 `usdc_apy` is the human readable APY.
 
+**NOTE** it takes at least 2 indexed blocks with an active position before an APY is calculated
+
 ## .env
 
 ```
