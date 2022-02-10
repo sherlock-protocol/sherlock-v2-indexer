@@ -79,6 +79,9 @@ class StakingPositions(Base):
         d = {}
         for column in self.__table__.columns:
             data = getattr(self, column.name)
+            if column.name in ["lockup_end"] and data is not None:
+                d[column.name] = int(data.timestamp())
+                continue
             d[column.name] = data
         return d
 

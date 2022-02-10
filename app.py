@@ -31,6 +31,7 @@ def positions(user):
 
     return {
         "ok": True,
+        "positions_usdc_last_updated": indexer.time_last_updated,
         "usdc_apy": indexer.apy,
         "usdc_increment_50ms_factor": indexer.apy_50ms_factor,
         "data": [x.to_dict() for x in positions]

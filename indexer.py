@@ -16,6 +16,7 @@ getcontext().prec = 78
 class Indexer:
     def __init__(self):
         self.block_last_updated = 0
+        self.time_last_updated = 0
         self.balance_factor = Decimal(1) # if 1.0, database value is correct, if 1.1, database value is 10% less than reality
         self.apy = 0.0 # User friendly apy e.g. 3.54 --> 3.54% per year
         self.apy_50ms_factor = 0.0 # Do * balance to get apy increase
@@ -51,11 +52,18 @@ class Indexer:
             self.apy_50ms_factor = apy / YEAR / 60 / 60 / 60 / 20
 
         self.block_last_updated = block
+        self.time_last_updated = timestamp
 
     class Transfer:
         def new(self, session, block, args):
             if args["to"] == ADDRESS_ZERO:
                 database.StakingPositions.delete(session, args["tokenId"])
+                return
+            elif args["from"] != ADDRESS_ZERO:
+                # from and to both are not zero, this is an actual transfer
+                database.StakingPositions.update(
+                    session, args["tokenId"], args["to"],
+                )
                 return
 
             # Update all database entries to be up to date with block
@@ -67,16 +75,9 @@ class Indexer:
                 self.balance_factor = Decimal(1)
                 self.__first_run = False
 
-            if args["from"] == ADDRESS_ZERO:
-                # Insert will retrieve active information
-                database.StakingPositions.insert(
-                    session, block, args["tokenId"], args["to"],
-                )
-                return
-
-            # from and to both are not zero
-            database.StakingPositions.update(
-                session, args["tokenId"], args["to"],
+            # Insert will retrieve active information (usdc, sher, lockup)
+            database.StakingPositions.insert(
+                session, block, args["tokenId"], args["to"],
             )
 
     def start(self):
