@@ -1,4 +1,5 @@
 import settings
+import sys
 from datetime import datetime, timedelta
 
 from sqlalchemy import Column, Integer, String, Float, desc
@@ -126,9 +127,18 @@ class IndexerState(Base):
 def main():
     Base.metadata.create_all(engine)
 
+    if len(sys.argv) != 2:
+        sys.exit("Usage: python database.py <start-block>")
+    try:
+        start_block = int(sys.argv[1])
+    except ValueError:
+        sys.exit("Usage: python database.py <start-block>")
+
     s = Session()
     s.add(StakingPositionsMeta())
-    s.add(IndexerState())
+    i = IndexerState()
+    i.last_block = start_block
+    s.add(i)
     s.commit()
     s.close()
 
