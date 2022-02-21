@@ -22,6 +22,7 @@ class Indexer:
         self.apy_50ms_factor = 0.0 # Do * balance to get apy increase
         self.events = {
             settings.CORE_WSS.events.Transfer: self.Transfer.new,
+            settings.SHER_BUY_WSS.events.Purchase: self.Purchase.new
         }
 
     # Also get called after listening to events with `end_block`
@@ -76,6 +77,14 @@ class Indexer:
             database.StakingPositions.insert(
                 session, block, args["tokenId"], args["to"],
             )
+    
+    class Purchase:
+        def new(self, session, block, args):
+            position = database.FundraisePositions.get(session, args["buyer"])
+            if position is None:
+                database.FundraisePositions.insert(session, block, args["buyer"], args["staked"], args["paid"], args["amount"])
+            else:
+                database.FundraisePositions.update(session, args["buyer"], position.stake + args["staked"], position.contribution + args["paid"], position.reward + args["amount"])
 
     def start(self):
         # get last block indexed from database
