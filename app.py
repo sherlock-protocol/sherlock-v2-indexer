@@ -15,8 +15,8 @@ from web3 import Web3
 
 app = Flask(__name__)
 
-@app.route("/positions/<user>")
-def positions(user):
+@app.route("/positions/<user>/staking")
+def staking_positions(user):
     if not Web3.isChecksumAddress(user):
         return {
             "ok": False,
@@ -35,6 +35,22 @@ def positions(user):
         "usdc_apy": indexer.apy,
         "usdc_increment_50ms_factor": indexer.apy_50ms_factor,
         "data": [x.to_dict() for x in positions]
+    }
+
+@app.route("/positions/<user>/fundraise")
+def fundraise_positions(user):
+    if not Web3.isChecksumAddress(user):
+        return {
+            "ok": False,
+            "error": "Argument should be checksummed address"
+        }
+
+    with database.Session() as s:
+        position = database.FundraisePositions.get(s, user)
+
+    return {
+        "ok": True,
+        "data": position.to_dict()
     }
 
 threads = []

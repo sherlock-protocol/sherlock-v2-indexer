@@ -1,8 +1,7 @@
-from turtle import st
 import settings
 from datetime import datetime, timedelta
 
-from sqlalchemy import Column, Integer, String, Float, desc, null
+from sqlalchemy import Column, Integer, String, Float, desc
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import TIMESTAMP, NUMERIC, BIGINT, DOUBLE_PRECISION
@@ -42,7 +41,6 @@ class FundraisePositions(Base):
         p.stake = stake
         p.contribution = contribution
         p.reward = reward
-        
 
     @staticmethod
     def get(session, owner):
