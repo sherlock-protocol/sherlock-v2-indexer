@@ -84,7 +84,9 @@ class Indexer:
             if position is None:
                 database.FundraisePositions.insert(session, block, args["buyer"], args["staked"], args["paid"], args["amount"])
             else:
-                database.FundraisePositions.update(session, args["buyer"], position.stake + args["staked"], position.contribution + args["paid"], position.reward + args["amount"])
+                position.stake += args["staked"]
+                position.contribution += args["paid"]
+                position.reward += args["amount"]
 
     def start(self):
         # get last block indexed from database
