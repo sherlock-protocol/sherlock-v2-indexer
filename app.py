@@ -7,6 +7,7 @@ import database
 
 from threading import Thread
 from flask import Flask
+from flask_cors import CORS
 
 from indexer import Indexer
 indexer = Indexer()
@@ -14,6 +15,7 @@ indexer = Indexer()
 from web3 import Web3
 
 app = Flask(__name__)
+CORS(app)
 
 @app.route("/positions/<user>/staking")
 def staking_positions(user):
