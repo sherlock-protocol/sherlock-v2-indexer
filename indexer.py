@@ -155,3 +155,8 @@ class Indexer:
                     continue
 
                 logging.debug("Processed %s event from smart contract", entry["event"])
+
+if __name__ == "__main__":
+    print("started indexer")
+    indexer = Indexer()
+    indexer.start()
