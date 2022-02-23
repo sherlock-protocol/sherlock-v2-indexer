@@ -27,15 +27,16 @@ def staking_positions(user):
 
     with database.Session() as s:
         positions = database.StakingPositions.get(s, user)
+        indexer_data = s.query(database.IndexerState).first()
 
     for pos in positions:
-        pos.usdc = round(pos.usdc * indexer.balance_factor)
+        pos.usdc = round(pos.usdc * indexer_data.balance_factor)
 
     return {
         "ok": True,
-        "positions_usdc_last_updated": indexer.time_last_updated,
-        "usdc_apy": indexer.apy,
-        "usdc_increment_50ms_factor": indexer.apy_50ms_factor,
+        "positions_usdc_last_updated": int(indexer_data.last_time.timestamp()),
+        "usdc_apy": indexer_data.apy,
+        "usdc_increment_50ms_factor": indexer_data.apy_50ms_factor,
         "data": [x.to_dict() for x in positions]
     }
 
