@@ -34,7 +34,7 @@ class Indexer:
 
         timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
         position_timedelta = timestamp - meta.usdc_last_updated.timestamp()
-        if position_timedelta = 0:
+        if position_timedelta == 0:
             return
 
         position = database.StakingPositions.get_for_factor(session)
