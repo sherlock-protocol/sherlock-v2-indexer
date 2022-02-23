@@ -30,5 +30,15 @@ with open(os.path.join(REPO, 'artifacts', 'contracts', 'Sherlock.sol', 'Sherlock
     CORE_ABI = json.load(json_data)["abi"]
 CORE_WSS = WEB3_WSS.eth.contract(address=CORE_ADDRESS, abi=CORE_ABI)
 
+SHER_BUY_ADDRESS = config('SHERLOCK_V2_SHER_BUY')
+with open(os.path.join(REPO, 'artifacts', 'contracts', 'SherBuy.sol', 'SherBuy.json')) as json_data:
+    SHER_BUY_ABI = json.load(json_data)["abi"]
+SHER_BUY_WSS = WEB3_WSS.eth.contract(address=SHER_BUY_ADDRESS, abi=SHER_BUY_ABI)
+
+SHER_CLAIM_ADDRESS = config('SHERLOCK_V2_SHER_CLAIM')
+with open(os.path.join(REPO, 'artifacts', 'contracts', 'SherClaim.sol', 'SherClaim.json')) as json_data:
+    SHER_CLAIM_ABI = json.load(json_data)["abi"]
+SHER_CLAIM_WSS = WEB3_WSS.eth.contract(address=SHER_CLAIM_ADDRESS, abi=SHER_CLAIM_ABI)
+
 INDEXER_BLOCKS_PER_CALL = 5
 INDEXER_SLEEP_BETWEEN_CALL = config('INDEXER_SLEEP_BETWEEN_CALL', default=5.0, cast=float)
