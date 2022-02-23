@@ -50,6 +50,12 @@ def fundraise_positions(user):
     with database.Session() as s:
         position = database.FundraisePositions.get(s, user)
 
+    if position is None:
+        return {
+            "ok": True,
+            "data": None
+        }
+
     return {
         "ok": True,
         "data": position.to_dict()
