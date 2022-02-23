@@ -177,9 +177,9 @@ class IndexerState(Base):
     id = Column(Integer, primary_key=True, default=1)
     last_block = Column(Integer, nullable=False, default=0)
     last_time = Column(TIMESTAMP, nullable=False, default=datetime(1970, 1, 1, 1))
-    balance_factor = Column(NUMERIC(78, 77), nullable=False, default=0.0)
+    balance_factor = Column(NUMERIC(78, 70), nullable=False, default=0.0)
     apy = Column(Float, nullable=False, default=0.0)
-    apy_50ms_factor = Column(NUMERIC(78, 77), nullable=False, default=0.0)
+    apy_50ms_factor = Column(NUMERIC(78, 70), nullable=False, default=0.0)
 
 def main():
     Base.metadata.create_all(engine)
