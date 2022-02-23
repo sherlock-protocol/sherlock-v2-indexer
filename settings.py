@@ -2,6 +2,7 @@ from sqlalchemy import create_engine
 from decouple import config
 
 from web3 import Web3, HTTPProvider, WebsocketProvider
+from web3.middleware import geth_poa_middleware
 
 import os
 import json
@@ -21,6 +22,8 @@ DB = create_engine('postgresql+psycopg2://{}:{}@localhost:{}/{}'.format(
 
 # Web3 connection
 WEB3_WSS = Web3(WebsocketProvider(config('WEB3_PROVIDER_WSS')))
+if "goerli" in config('WEB3_PROVIDER_WSS'):
+    WEB3_WSS.middleware_onion.inject(geth_poa_middleware, layer=0)
 
 # Repo location on system
 REPO = config('SHERLOCK_V2_CORE_PATH')
