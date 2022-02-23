@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
+logging.basicConfig(filename='output.log', level=logging.INFO)
 
 class Indexer:
     def __init__(self):
@@ -119,7 +120,7 @@ class Indexer:
                 s.query(database.IndexerState).first().last_block = start_block
                 s.commit()
             except Exception as e:
-                log.warning("Encountered exception %s" % e)
+                logging.exception("Encountered exception %s" % e)
                 time.sleep(settings.INDEXER_SLEEP_BETWEEN_CALL)
 
     def index_events_time(self, session, start_block, end_block):
