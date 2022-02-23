@@ -118,7 +118,7 @@ class Indexer:
                 start_block = end_block + 1
                 s.query(database.IndexerState).first().last_block = start_block
                 s.commit()
-            except Exception e:
+            except Exception as e:
                 log.warning("Encountered exception %s" % e)
                 time.sleep(settings.INDEXER_SLEEP_BETWEEN_CALL)
 
