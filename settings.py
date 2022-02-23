@@ -43,5 +43,9 @@ with open(os.path.join(REPO, 'artifacts', 'contracts', 'SherClaim.sol', 'SherCla
     SHER_CLAIM_ABI = json.load(json_data)["abi"]
 SHER_CLAIM_WSS = WEB3_WSS.eth.contract(address=SHER_CLAIM_ADDRESS, abi=SHER_CLAIM_ABI)
 
+SHER_CLAIM_AT = SHER_CLAIM_WSS.functions\
+            .claimableAt()\
+            .call()
+
 INDEXER_BLOCKS_PER_CALL = 5
 INDEXER_SLEEP_BETWEEN_CALL = config('INDEXER_SLEEP_BETWEEN_CALL', default=5.0, cast=float)

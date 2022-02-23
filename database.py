@@ -23,9 +23,7 @@ class FundraisePositions(Base):
 
     @staticmethod
     def insert(session, block, owner, stake, contribution, reward):
-        claimable_at = settings.SHER_CLAIM_WSS.functions\
-            .claimableAt()\
-            .call(block_identifier=block)
+        claimable_at = settings.SHER_CLAIM_AT
 
         p = FundraisePositions()
         p.id = owner
