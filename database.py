@@ -177,7 +177,7 @@ class IndexerState(Base):
     __tablename__ = 'indexer_state'
 
     id = Column(Integer, primary_key=True, default=1)
-    last_block = Column(Integer, nullable=False, default=14249220)
+    last_block = Column(Integer, nullable=False, default=0)
 
 def main():
     Base.metadata.create_all(engine)
