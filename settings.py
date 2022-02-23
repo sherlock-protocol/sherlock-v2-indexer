@@ -21,7 +21,7 @@ DB = create_engine('postgresql+psycopg2://{}:{}@localhost:{}/{}'.format(
 ), echo=False)
 
 # Web3 connection
-WEB3_WSS = Web3(WebsocketProvider(config('WEB3_PROVIDER_WSS')))
+WEB3_WSS = Web3(WebsocketProvider(config('WEB3_PROVIDER_WSS'), websocket_timeout=180))
 if "goerli" in config('WEB3_PROVIDER_WSS'):
     WEB3_WSS.middleware_onion.inject(geth_poa_middleware, layer=0)
 

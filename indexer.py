@@ -77,7 +77,7 @@ class Indexer:
             database.StakingPositions.insert(
                 session, block, args["tokenId"], args["to"],
             )
-    
+
     class Purchase:
         def new(self, session, block, args):
             position = database.FundraisePositions.get(session, args["buyer"])
@@ -96,27 +96,31 @@ class Indexer:
         t = threading.currentThread()
         logging.debug("Thread started")
         while getattr(t, "do_run", True):
-            s = database.Session()
+            try:
+                s = database.Session()
 
-            # Process 5 blocks each round
-            end_block = start_block + settings.INDEXER_BLOCKS_PER_CALL - 1
-            current_block = settings.WEB3_WSS.eth.blockNumber
+                # Process 5 blocks each round
+                end_block = start_block + settings.INDEXER_BLOCKS_PER_CALL - 1
+                current_block = settings.WEB3_WSS.eth.blockNumber
 
-            if end_block >= current_block:
-                end_block = current_block
+                if end_block >= current_block:
+                    end_block = current_block
 
-            if start_block > end_block:
+                if start_block > end_block:
+                    time.sleep(settings.INDEXER_SLEEP_BETWEEN_CALL)
+                    continue
+
+                # If think update apy factor here? So we can already use in the events
+
+                self.index_events_time(s, start_block, end_block)
+                self.calc_factors(s, end_block)
+
+                start_block = end_block + 1
+                s.query(database.IndexerState).first().last_block = start_block
+                s.commit()
+            except Exception e:
+                log.warning("Encountered exception %s" % e)
                 time.sleep(settings.INDEXER_SLEEP_BETWEEN_CALL)
-                continue
-
-            # If think update apy factor here? So we can already use in the events
-
-            self.index_events_time(s, start_block, end_block)
-            self.calc_factors(s, end_block)
-
-            start_block = end_block + 1
-            s.query(database.IndexerState).first().last_block = start_block
-            s.commit()
 
     def index_events_time(self, session, start_block, end_block):
         start = datetime.utcnow()
