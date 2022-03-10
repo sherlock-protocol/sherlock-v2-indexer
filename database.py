@@ -116,7 +116,8 @@ class StakingPositions(Base):
 
     @staticmethod
     def get(session, owner):
-        return session.query(StakingPositions).filter_by(owner=owner).all()
+        return session.query(StakingPositions).filter_by(owner=owner).\
+            order_by(desc(StakingPositions.lockup_end)).all()
 
     def get_balance_data(self, block):
         usdc = settings.CORE_WSS.functions\
