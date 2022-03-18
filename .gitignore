@@ -4,3 +4,7 @@ __pycache__/
 venv
 *.pyc
 
+output.log
+dbdata
+.idea
+.pytest_cache
