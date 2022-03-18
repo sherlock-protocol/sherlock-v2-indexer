@@ -13,6 +13,7 @@ from indexer import Indexer
 indexer = Indexer()
 
 from web3 import Web3
+from utils import calculate_increment
 
 app = Flask(__name__)
 CORS(app)
@@ -29,15 +30,21 @@ def staking_positions(user):
         positions = database.StakingPositions.get(s, user)
         indexer_data = s.query(database.IndexerState).first()
 
+    # Transform positions in list of dictionaries
+    positions = [x.to_dict() for x in positions]
+
+    # Compute USDC increment and updated balance
+    apy = indexer_data.apy
+
     for pos in positions:
-        pos.usdc = round(pos.usdc * indexer_data.balance_factor)
+        pos['usdc_increment'] = calculate_increment(pos['usdc'], apy)
+        pos['usdc'] = round(pos['usdc'] * indexer_data.balance_factor)
 
     return {
         "ok": True,
         "positions_usdc_last_updated": int(indexer_data.last_time.timestamp()),
-        "usdc_apy": indexer_data.apy,
-        "usdc_increment_50ms_factor": indexer_data.apy_50ms_factor,
-        "data": [x.to_dict() for x in positions]
+        "usdc_apy": round(indexer_data.apy * 100, 6),
+        "data": positions
     }
 
 @app.route("/positions/<user>/fundraise")

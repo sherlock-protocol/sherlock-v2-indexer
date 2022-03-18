@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from web3.constants import ADDRESS_ZERO
 
 from sqlalchemy.exc import IntegrityError
+from utils import time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
@@ -41,13 +42,12 @@ class Indexer:
         usdc, factor = position.get_balance_data(block)
 
         # TODO make compounding?
-        apy = YEAR / Decimal(position_timedelta) * (factor - 1)
+        apy = time_delta_apy(position.usdc, usdc, position_timedelta)
 
         indx.balance_factor = factor
         # If no payout has occured since the last loop
         if apy > 0.0:
-            indx.apy = round(apy * 100, 2)
-            indx.apy_50ms_factor = apy / YEAR / 60 / 60 / 60 / 20
+            indx.apy = apy
 
         indx.block_last_updated = block
         indx.last_time = datetime.fromtimestamp(timestamp)
