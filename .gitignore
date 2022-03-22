@@ -8,3 +8,4 @@ output.log
 dbdata
 .idea
 .pytest_cache
+.vscode

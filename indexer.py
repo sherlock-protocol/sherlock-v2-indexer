@@ -1,26 +1,27 @@
-import settings
-import database
-import threading
 import logging
+import threading
 import time
-from decimal import *
-
 from datetime import datetime, timedelta
-from web3.constants import ADDRESS_ZERO
+from decimal import Decimal, getcontext
 
 from sqlalchemy.exc import IntegrityError
+from web3.constants import ADDRESS_ZERO
+
+import database
+import settings
 from utils import time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
-logging.basicConfig(filename='output.log', level=logging.INFO)
+logging.basicConfig(filename="output.log", level=logging.INFO)
+
 
 class Indexer:
     def __init__(self):
         self.block_last_updated = 0
         self.events = {
             settings.CORE_WSS.events.Transfer: self.Transfer.new,
-            settings.SHER_BUY_WSS.events.Purchase: self.Purchase.new
+            settings.SHER_BUY_WSS.events.Purchase: self.Purchase.new,
         }
 
     # Also get called after listening to events with `end_block`
@@ -60,7 +61,9 @@ class Indexer:
             elif args["from"] != ADDRESS_ZERO:
                 # from and to both are not zero, this is an actual transfer
                 database.StakingPositions.update(
-                    session, args["tokenId"], args["to"],
+                    session,
+                    args["tokenId"],
+                    args["to"],
                 )
                 return
 
@@ -75,14 +78,24 @@ class Indexer:
 
             # Insert will retrieve active information (usdc, sher, lockup)
             database.StakingPositions.insert(
-                session, block, args["tokenId"], args["to"],
+                session,
+                block,
+                args["tokenId"],
+                args["to"],
             )
 
     class Purchase:
         def new(self, session, indx, block, args):
             position = database.FundraisePositions.get(session, args["buyer"])
             if position is None:
-                database.FundraisePositions.insert(session, block, args["buyer"], args["staked"], args["paid"], args["amount"])
+                database.FundraisePositions.insert(
+                    session,
+                    block,
+                    args["buyer"],
+                    args["staked"],
+                    args["paid"],
+                    args["amount"],
+                )
             else:
                 position.stake += args["staked"]
                 position.contribution += args["paid"]
@@ -129,14 +142,16 @@ class Indexer:
         self.index_events(session, indx, start_block, end_block)
 
         took_seconds = (datetime.utcnow() - start).microseconds / 1000
-        logging.debug("took %s ms to listen to all events. listened to %s blocks (range %s-%s)" % (
-            took_seconds, (end_block-start_block)+1, start_block, end_block)
+        logging.debug(
+            "took %s ms to listen to all events. listened to %s blocks (range %s-%s)"
+            % (took_seconds, (end_block - start_block) + 1, start_block, end_block)
         )
 
-        if took_seconds > (end_block-start_block)+1 * 1000:
+        if took_seconds > (end_block - start_block) + 1 * 1000:
             # Can not keep up with the blocks that are created
-            logging.warning("Can not keep up with the blocks that are created took %s microseconds for %s blocks" % (
-                took_seconds, (end_block-start_block)+1)
+            logging.warning(
+                "Can not keep up with the blocks that are created took %s microseconds for %s blocks"
+                % (took_seconds, (end_block - start_block) + 1)
             )
 
     def index_events(self, session, indx, start_block, end_block):
@@ -148,13 +163,16 @@ class Indexer:
                     func(self, session, indx, entry["blockNumber"], entry["args"])
                     session.commit()
                 except IntegrityError:
-                    logging.warning("Could not process an %s event from smart contract with arguments %s",
-                                entry["event"], entry["args"]
-                                )
+                    logging.warning(
+                        "Could not process an %s event from smart contract with arguments %s",
+                        entry["event"],
+                        entry["args"],
+                    )
                     session.rollback()
                     continue
 
                 logging.debug("Processed %s event from smart contract", entry["event"])
+
 
 if __name__ == "__main__":
     print("started indexer")

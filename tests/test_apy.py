@@ -3,14 +3,18 @@ from decimal import Decimal
 
 import pytest
 
-from utils import time_delta_apy, SECONDS_IN_A_YEAR, calculate_increment
+from utils import SECONDS_IN_A_YEAR, calculate_increment, time_delta_apy
 
 
-@pytest.mark.parametrize("old, new, time_delta, apy",
-                         [(1, 1.01, 1, SECONDS_IN_A_YEAR / 100),
-                          (1, 1.02, 1, 2 * SECONDS_IN_A_YEAR / 100),
-                          (1, 1.01, 2, SECONDS_IN_A_YEAR / 100 / 2),
-                          (1, 1.25, SECONDS_IN_A_YEAR / 4, 1)])
+@pytest.mark.parametrize(
+    "old, new, time_delta, apy",
+    [
+        (1, 1.01, 1, SECONDS_IN_A_YEAR / 100),
+        (1, 1.02, 1, 2 * SECONDS_IN_A_YEAR / 100),
+        (1, 1.01, 2, SECONDS_IN_A_YEAR / 100 / 2),
+        (1, 1.25, SECONDS_IN_A_YEAR / 4, 1),
+    ],
+)
 def test_apy_computed_correctly(old, new, time_delta, apy):
     computed_apy = time_delta_apy(old, new, time_delta)
 
@@ -18,10 +22,14 @@ def test_apy_computed_correctly(old, new, time_delta, apy):
     assert math.isclose(apy, computed_apy, rel_tol=1e-6)
 
 
-@pytest.mark.parametrize("apy, amount, time_delta",
-                         [(Decimal(2), Decimal(1), SECONDS_IN_A_YEAR ),
-                          (Decimal(39), Decimal(324.98), 120),
-                          (Decimal(0.04), Decimal(1000), 1)])
+@pytest.mark.parametrize(
+    "apy, amount, time_delta",
+    [
+        (Decimal(2), Decimal(1), SECONDS_IN_A_YEAR),
+        (Decimal(39), Decimal(324.98), 120),
+        (Decimal(0.04), Decimal(1000), 1),
+    ],
+)
 def test_increment_computed_correctly(apy, amount, time_delta):
     # Compute the increment from the APY and the amount
     increment = calculate_increment(amount, apy)

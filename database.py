@@ -1,18 +1,21 @@
-import settings
+import json
 import sys
 from datetime import datetime, timedelta
 
-from sqlalchemy import Column, Integer, String, Float, desc
+from sqlalchemy import Column, Float, Integer, String, desc
+from sqlalchemy.dialects.postgresql import BIGINT, NUMERIC, TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.dialects.postgresql import TIMESTAMP, NUMERIC, BIGINT, DOUBLE_PRECISION
+
+import settings
 
 Base = declarative_base()
 engine = settings.DB
 Session = sessionmaker(bind=engine)
 
+
 class FundraisePositions(Base):
-    __tablename__ = 'fundraise_positions'
+    __tablename__ = "fundraise_positions"
 
     # id is actually the owner's address
     id = Column(String(42), primary_key=True)
@@ -64,8 +67,9 @@ class FundraisePositions(Base):
         """
         return json.dumps(self.to_dict(), default=str)
 
+
 class StakingPositions(Base):
-    __tablename__ = 'staking_positions'
+    __tablename__ = "staking_positions"
 
     id = Column(BIGINT, primary_key=True)
     owner = Column(String(42), nullable=False)
@@ -78,24 +82,24 @@ class StakingPositions(Base):
         # Get biggest USDC position that is not about to expire
         safe_time = datetime.utcnow() + timedelta(days=7)
 
-        return session.query(StakingPositions).\
-            filter(StakingPositions.lockup_end > safe_time).\
-            order_by(desc(StakingPositions.usdc)).\
-            first()
+        return (
+            session.query(StakingPositions)
+            .filter(StakingPositions.lockup_end > safe_time)
+            .order_by(desc(StakingPositions.usdc))
+            .first()
+        )
 
     @staticmethod
     def insert(session, block, id, owner):
-        lockup_end = settings.CORE_WSS.functions\
-            .lockupEnd(id)\
-            .call(block_identifier=block)
+        lockup_end = settings.CORE_WSS.functions.lockupEnd(id).call(
+            block_identifier=block
+        )
 
-        usdc = settings.CORE_WSS.functions\
-            .tokenBalanceOf(id)\
-            .call(block_identifier=block)
+        usdc = settings.CORE_WSS.functions.tokenBalanceOf(id).call(
+            block_identifier=block
+        )
 
-        sher = settings.CORE_WSS.functions\
-            .sherRewards(id)\
-            .call(block_identifier=block)
+        sher = settings.CORE_WSS.functions.sherRewards(id).call(block_identifier=block)
 
         s = StakingPositions()
         s.id = id
@@ -116,13 +120,17 @@ class StakingPositions(Base):
 
     @staticmethod
     def get(session, owner):
-        return session.query(StakingPositions).filter_by(owner=owner).\
-            order_by(desc(StakingPositions.lockup_end)).all()
+        return (
+            session.query(StakingPositions)
+            .filter_by(owner=owner)
+            .order_by(desc(StakingPositions.lockup_end))
+            .all()
+        )
 
     def get_balance_data(self, block):
-        usdc = settings.CORE_WSS.functions\
-            .tokenBalanceOf(self.id)\
-            .call(block_identifier=block)
+        usdc = settings.CORE_WSS.functions.tokenBalanceOf(self.id).call(
+            block_identifier=block
+        )
 
         factor = usdc / self.usdc
         return usdc, factor
@@ -146,9 +154,10 @@ class StakingPositions(Base):
         """
         return json.dumps(self.to_dict(), default=str)
 
+
 # Single row
 class StakingPositionsMeta(Base):
-    __tablename__ = 'staking_positions_meta'
+    __tablename__ = "staking_positions_meta"
 
     id = Column(Integer, primary_key=True, default=1)
     usdc_last_updated = Column(TIMESTAMP, nullable=False, default=datetime.min)
@@ -164,23 +173,27 @@ class StakingPositionsMeta(Base):
 
         session.execute(
             "update staking_positions set usdc = usdc * :factor;",
-            {'factor': balance_factor}
+            {"factor": balance_factor},
         )
 
         data = StakingPositionsMeta.get(session)
         data.usdc_last_updated = datetime.fromtimestamp(timestamp)
         data.usdc_last_updated_block = block
 
+
 # Single row
 class IndexerState(Base):
-    __tablename__ = 'indexer_state'
+    __tablename__ = "indexer_state"
 
     id = Column(Integer, primary_key=True, default=1)
     last_block = Column(Integer, nullable=False, default=0)
     last_time = Column(TIMESTAMP, nullable=False, default=datetime(1970, 1, 1, 1))
     balance_factor = Column(NUMERIC(78, 70), nullable=False, default=0.0)
     apy = Column(Float, nullable=False, default=0.0)
-    apy_50ms_factor = Column(NUMERIC(78, 70), nullable=False, default=0.0) # TODO: Remove unused column
+    apy_50ms_factor = Column(
+        NUMERIC(78, 70), nullable=False, default=0.0
+    )  # TODO: Remove unused column
+
 
 def main():
     Base.metadata.create_all(engine)
@@ -199,6 +212,7 @@ def main():
     s.add(i)
     s.commit()
     s.close()
+
 
 if __name__ == "__main__":
     main()
