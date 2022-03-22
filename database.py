@@ -91,13 +91,9 @@ class StakingPositions(Base):
 
     @staticmethod
     def insert(session, block, id, owner):
-        lockup_end = settings.CORE_WSS.functions.lockupEnd(id).call(
-            block_identifier=block
-        )
+        lockup_end = settings.CORE_WSS.functions.lockupEnd(id).call(block_identifier=block)
 
-        usdc = settings.CORE_WSS.functions.tokenBalanceOf(id).call(
-            block_identifier=block
-        )
+        usdc = settings.CORE_WSS.functions.tokenBalanceOf(id).call(block_identifier=block)
 
         sher = settings.CORE_WSS.functions.sherRewards(id).call(block_identifier=block)
 
@@ -120,17 +116,10 @@ class StakingPositions(Base):
 
     @staticmethod
     def get(session, owner):
-        return (
-            session.query(StakingPositions)
-            .filter_by(owner=owner)
-            .order_by(desc(StakingPositions.lockup_end))
-            .all()
-        )
+        return session.query(StakingPositions).filter_by(owner=owner).order_by(desc(StakingPositions.lockup_end)).all()
 
     def get_balance_data(self, block):
-        usdc = settings.CORE_WSS.functions.tokenBalanceOf(self.id).call(
-            block_identifier=block
-        )
+        usdc = settings.CORE_WSS.functions.tokenBalanceOf(self.id).call(block_identifier=block)
 
         factor = usdc / self.usdc
         return usdc, factor
@@ -190,9 +179,7 @@ class IndexerState(Base):
     last_time = Column(TIMESTAMP, nullable=False, default=datetime(1970, 1, 1, 1))
     balance_factor = Column(NUMERIC(78, 70), nullable=False, default=0.0)
     apy = Column(Float, nullable=False, default=0.0)
-    apy_50ms_factor = Column(
-        NUMERIC(78, 70), nullable=False, default=0.0
-    )  # TODO: Remove unused column
+    apy_50ms_factor = Column(NUMERIC(78, 70), nullable=False, default=0.0)  # TODO: Remove unused column
 
 
 def main():

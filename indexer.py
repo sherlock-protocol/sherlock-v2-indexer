@@ -71,9 +71,7 @@ class Indexer:
             self.calc_factors(session, indx, block)
 
             if indx.balance_factor != Decimal(1):
-                database.StakingPositionsMeta.update(
-                    session, block, indx.balance_factor
-                )
+                database.StakingPositionsMeta.update(session, block, indx.balance_factor)
                 indx.balance_factor = Decimal(1)
 
             # Insert will retrieve active information (usdc, sher, lockup)
