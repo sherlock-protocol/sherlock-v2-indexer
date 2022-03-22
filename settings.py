@@ -15,8 +15,9 @@ DB_PASS = config("DB_PASS")
 DB_PORT = config("DB_PORT")
 DB_NAME = config("DB_NAME")
 
+DATABASE_URI = "postgresql+psycopg2://{}:{}@localhost:{}/{}".format(DB_USER, DB_PASS, DB_PORT, DB_NAME)
 DB = create_engine(
-    "postgresql+psycopg2://{}:{}@localhost:{}/{}".format(DB_USER, DB_PASS, DB_PORT, DB_NAME),
+    DATABASE_URI,
     echo=False,
 )
 
