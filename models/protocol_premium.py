@@ -34,3 +34,9 @@ class ProtocolPremium(Base):
         protocol_premium.premium_set_at = premium_set_at
 
         session.add(protocol_premium)
+
+    def to_dict(self):
+        return {
+            "premium": self.premium,
+            "premium_set_at": int(self.premium_set_at.timestamp()) if self.premium_set_at else None,
+        }
