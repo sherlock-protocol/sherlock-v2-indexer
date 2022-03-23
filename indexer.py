@@ -8,7 +8,15 @@ from sqlalchemy.exc import IntegrityError
 from web3.constants import ADDRESS_ZERO
 
 import settings
-from models import FundraisePositions, IndexerState, Session, StakingPositions, StakingPositionsMeta
+from models import (
+    FundraisePositions,
+    IndexerState,
+    Protocol,
+    ProtocolPremium,
+    Session,
+    StakingPositions,
+    StakingPositionsMeta,
+)
 from utils import time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
@@ -22,6 +30,9 @@ class Indexer:
         self.events = {
             settings.CORE_WSS.events.Transfer: self.Transfer.new,
             settings.SHER_BUY_WSS.events.Purchase: self.Purchase.new,
+            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolAdded: self.ProtocolAdded.new,
+            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolAgentTransfer: self.ProtocolAgentTransfer.new,
+            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolPremiumChanged: self.ProtocolPremiumChanged.new,
         }
 
     # Also get called after listening to events with `end_block`
@@ -98,6 +109,39 @@ class Indexer:
                 position.stake += args["staked"]
                 position.contribution += args["paid"]
                 position.reward += args["amount"]
+
+    class ProtocolAdded:
+        def new(self, session, indx, block, args):
+            logging.debug("[+] ProtocolAdded")
+
+            protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
+
+            protocol = Protocol.get(session, protocol_bytes_id)
+            if not protocol:
+                print("Adding protocol")
+                Protocol.insert(session, protocol_bytes_id)
+
+    class ProtocolAgentTransfer:
+        def new(self, session, indx, block, args):
+            logging.debug("[+] ProtocolAgentTransfer")
+            protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
+            new_agent = args["to"]
+
+            Protocol.update_agent(session, protocol_bytes_id, new_agent)
+
+    class ProtocolPremiumChanged:
+        def new(self, session, indx, block, args):
+            logging.debug("[+] ProtocolPremiumChanged")
+            protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
+            new_premium = args["newPremium"]
+
+            protocol = Protocol.get(session, protocol_bytes_id)
+            if not protocol:
+                return
+
+            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+
+            ProtocolPremium.insert(session, protocol.id, new_premium, timestamp)
 
     def start(self):
         # get last block indexed from database
