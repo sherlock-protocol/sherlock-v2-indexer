@@ -1,11 +1,9 @@
 import sys
 
-from models import Base, IndexerState, Session, StakingPositionsMeta, engine
+from models import IndexerState, Session, StakingPositionsMeta
 
 
 def main():
-    Base.metadata.create_all(engine)
-
     if len(sys.argv) != 2:
         sys.exit("Usage: python database.py <start-block>")
     try:
