@@ -28,6 +28,8 @@ Run `pre-commit install` to set up git hooks to automatically lint and format be
 
 Create empty postgres database
 
+Run `alembic upgrade head` to apply all database migrations
+
 Call `python database.py` to initialize
 
 Call `python app.py` to start service
