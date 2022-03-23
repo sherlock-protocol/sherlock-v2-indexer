@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 
@@ -35,3 +37,11 @@ class Protocol(Base):
             return
 
         protocol.agent = agent
+
+    @staticmethod
+    def remove(session, bytes_identifier, timestamp):
+        protocol = Protocol.get(session, bytes_identifier)
+        if not protocol:
+            return
+
+        protocol.coverage_ended_at = datetime.fromtimestamp(timestamp)

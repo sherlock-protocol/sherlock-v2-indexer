@@ -33,6 +33,8 @@ class Indexer:
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolAdded: self.ProtocolAdded.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolAgentTransfer: self.ProtocolAgentTransfer.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolPremiumChanged: self.ProtocolPremiumChanged.new,
+            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemoved: self.ProtocolRemoved.new,
+            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
         }
 
     # Also get called after listening to events with `end_block`
@@ -142,6 +144,14 @@ class Indexer:
             timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
             ProtocolPremium.insert(session, protocol.id, new_premium, timestamp)
+
+    class ProtocolRemoved:
+        def new(self, session, indx, block, args):
+            logging.debug("[+] ProtocolRemoved/ProtocolRemovedByArb")
+            protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
+            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+
+            Protocol.remove(session, protocol_bytes_id, timestamp)
 
     def start(self):
         # get last block indexed from database
