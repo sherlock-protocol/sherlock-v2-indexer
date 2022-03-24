@@ -61,3 +61,4 @@ black==22.1.0  # https://github.com/psf/black#
 flake8==4.0.1  # https://github.com/PyCQA/flake8
 flake8-isort==4.1.1  # https://github.com/gforcada/flake8-isort
 pre-commit==2.15.0  # https://github.com/pre-commit/pre-commit
+alembic==1.7.7  # https://alembic.sqlalchemy.org/en/latest/

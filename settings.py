@@ -15,8 +15,9 @@ DB_PASS = config("DB_PASS")
 DB_PORT = config("DB_PORT")
 DB_NAME = config("DB_NAME")
 
+DATABASE_URI = "postgresql+psycopg2://{}:{}@localhost:{}/{}".format(DB_USER, DB_PASS, DB_PORT, DB_NAME)
 DB = create_engine(
-    "postgresql+psycopg2://{}:{}@localhost:{}/{}".format(DB_USER, DB_PASS, DB_PORT, DB_NAME),
+    DATABASE_URI,
     echo=False,
 )
 
@@ -42,6 +43,17 @@ SHER_CLAIM_ADDRESS = config("SHERLOCK_V2_SHER_CLAIM")
 with open(os.path.join(REPO, "artifacts", "contracts", "SherClaim.sol", "SherClaim.json")) as json_data:
     SHER_CLAIM_ABI = json.load(json_data)["abi"]
 SHER_CLAIM_WSS = WEB3_WSS.eth.contract(address=SHER_CLAIM_ADDRESS, abi=SHER_CLAIM_ABI)
+
+SHERLOCK_PROTOCOL_MANAGER_ADDRESS = config("SHERLOCK_V2_PROTOCOL_MANAGER")
+with open(
+    os.path.join(
+        REPO, "artifacts", "contracts", "managers", "SherlockProtocolManager.sol", "SherlockProtocolManager.json"
+    )
+) as json_data:
+    SHERLOCK_PROTOCOL_MANAGER_ABI = json.load(json_data)["abi"]
+SHERLOCK_PROTOCOL_MANAGER_WSS = WEB3_WSS.eth.contract(
+    address=SHERLOCK_PROTOCOL_MANAGER_ADDRESS, abi=SHERLOCK_PROTOCOL_MANAGER_ABI
+)
 
 SHER_CLAIM_AT = SHER_CLAIM_WSS.functions.newEntryDeadline().call() + 60 * 60 * 24 * 7 * 26  # + 26 weeks
 

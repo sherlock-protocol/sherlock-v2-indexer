@@ -7,8 +7,16 @@ from decimal import Decimal, getcontext
 from sqlalchemy.exc import IntegrityError
 from web3.constants import ADDRESS_ZERO
 
-import database
 import settings
+from models import (
+    FundraisePositions,
+    IndexerState,
+    Protocol,
+    ProtocolPremium,
+    Session,
+    StakingPositions,
+    StakingPositionsMeta,
+)
 from utils import time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
@@ -22,6 +30,11 @@ class Indexer:
         self.events = {
             settings.CORE_WSS.events.Transfer: self.Transfer.new,
             settings.SHER_BUY_WSS.events.Purchase: self.Purchase.new,
+            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolAdded: self.ProtocolAdded.new,
+            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolAgentTransfer: self.ProtocolAgentTransfer.new,
+            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolPremiumChanged: self.ProtocolPremiumChanged.new,
+            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemoved: self.ProtocolRemoved.new,
+            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
         }
 
     # Also get called after listening to events with `end_block`
@@ -29,7 +42,7 @@ class Indexer:
         if self.block_last_updated == block:
             return
 
-        meta = database.StakingPositionsMeta.get(session)
+        meta = StakingPositionsMeta.get(session)
         if meta.usdc_last_updated == datetime.min:
             self.block_last_updated = block
             return
@@ -39,7 +52,7 @@ class Indexer:
         if position_timedelta == 0:
             return
 
-        position = database.StakingPositions.get_for_factor(session)
+        position = StakingPositions.get_for_factor(session)
         usdc, factor = position.get_balance_data(block)
 
         # TODO make compounding?
@@ -56,11 +69,11 @@ class Indexer:
     class Transfer:
         def new(self, session, indx, block, args):
             if args["to"] == ADDRESS_ZERO:
-                database.StakingPositions.delete(session, args["tokenId"])
+                StakingPositions.delete(session, args["tokenId"])
                 return
             elif args["from"] != ADDRESS_ZERO:
                 # from and to both are not zero, this is an actual transfer
-                database.StakingPositions.update(
+                StakingPositions.update(
                     session,
                     args["tokenId"],
                     args["to"],
@@ -71,11 +84,11 @@ class Indexer:
             self.calc_factors(session, indx, block)
 
             if indx.balance_factor != Decimal(1):
-                database.StakingPositionsMeta.update(session, block, indx.balance_factor)
+                StakingPositionsMeta.update(session, block, indx.balance_factor)
                 indx.balance_factor = Decimal(1)
 
             # Insert will retrieve active information (usdc, sher, lockup)
-            database.StakingPositions.insert(
+            StakingPositions.insert(
                 session,
                 block,
                 args["tokenId"],
@@ -84,9 +97,9 @@ class Indexer:
 
     class Purchase:
         def new(self, session, indx, block, args):
-            position = database.FundraisePositions.get(session, args["buyer"])
+            position = FundraisePositions.get(session, args["buyer"])
             if position is None:
-                database.FundraisePositions.insert(
+                FundraisePositions.insert(
                     session,
                     block,
                     args["buyer"],
@@ -99,16 +112,57 @@ class Indexer:
                 position.contribution += args["paid"]
                 position.reward += args["amount"]
 
+    class ProtocolAdded:
+        def new(self, session, indx, block, args):
+            logging.debug("[+] ProtocolAdded")
+
+            protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
+
+            protocol = Protocol.get(session, protocol_bytes_id)
+            if not protocol:
+                print("Adding protocol")
+                Protocol.insert(session, protocol_bytes_id)
+
+    class ProtocolAgentTransfer:
+        def new(self, session, indx, block, args):
+            logging.debug("[+] ProtocolAgentTransfer")
+            protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
+            new_agent = args["to"]
+
+            Protocol.update_agent(session, protocol_bytes_id, new_agent)
+
+    class ProtocolPremiumChanged:
+        def new(self, session, indx, block, args):
+            logging.debug("[+] ProtocolPremiumChanged")
+            protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
+            new_premium = args["newPremium"]
+
+            protocol = Protocol.get(session, protocol_bytes_id)
+            if not protocol:
+                return
+
+            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+
+            ProtocolPremium.insert(session, protocol.id, new_premium, timestamp)
+
+    class ProtocolRemoved:
+        def new(self, session, indx, block, args):
+            logging.debug("[+] ProtocolRemoved/ProtocolRemovedByArb")
+            protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
+            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+
+            Protocol.remove(session, protocol_bytes_id, timestamp)
+
     def start(self):
         # get last block indexed from database
-        with database.Session() as s:
-            start_block = s.query(database.IndexerState).first().last_block
+        with Session() as s:
+            start_block = s.query(IndexerState).first().last_block
 
         t = threading.currentThread()
         logging.debug("Thread started")
         while getattr(t, "do_run", True):
             try:
-                s = database.Session()
+                s = Session()
 
                 # Process 5 blocks each round
                 end_block = start_block + settings.INDEXER_BLOCKS_PER_CALL - 1
@@ -122,7 +176,7 @@ class Indexer:
                     continue
 
                 # If think update apy factor here? So we can already use in the events
-                indx = s.query(database.IndexerState).first()
+                indx = s.query(IndexerState).first()
 
                 self.index_events_time(s, indx, start_block, end_block)
                 self.calc_factors(s, indx, end_block)
