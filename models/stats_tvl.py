@@ -24,6 +24,10 @@ class StatsTVL(Base):
 
         session.add(tvl)
 
+    @staticmethod
+    def find_all(session):
+        return session.query(StatsTVL).all()
+
     def to_dict(self):
         """Converts object to dict.
         @return: dict
