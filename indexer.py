@@ -6,6 +6,7 @@ from decimal import Decimal, getcontext
 
 from sqlalchemy.exc import IntegrityError
 from web3.constants import ADDRESS_ZERO
+from models.stats_tvl import StatsTVL
 
 import settings
 from models import (
@@ -21,7 +22,8 @@ from utils import time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
-logging.basicConfig(filename="output.log", level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(filename="output.log", level=logging.INFO)
 
 
 class Indexer:
@@ -65,6 +67,21 @@ class Indexer:
 
         indx.block_last_updated = block
         indx.last_time = datetime.fromtimestamp(timestamp)
+
+    def calc_stats(self, session, indx, block):
+        last_block = indx.last_stats_block
+        blocks_between_calls = settings.INDEXER_STATS_BLOCKS_PER_CALL
+
+        if (last_block + blocks_between_calls > block):
+            return
+
+        timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
+        tvl = settings.CORE_WSS.functions.totalTokenBalanceStakers().call(block_identifier=block)
+
+        StatsTVL.insert(session, block, timestamp, tvl)
+
+        indx.last_stats_block = block
+        indx.last_stats_time = timestamp
 
     class Transfer:
         def new(self, session, indx, block, args):
@@ -180,6 +197,7 @@ class Indexer:
 
                 self.index_events_time(s, indx, start_block, end_block)
                 self.calc_factors(s, indx, end_block)
+                self.calc_stats(s, indx, end_block)
 
                 start_block = end_block + 1
                 indx.last_block = start_block

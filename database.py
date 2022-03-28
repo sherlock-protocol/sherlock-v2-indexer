@@ -15,6 +15,7 @@ def main():
     s.add(StakingPositionsMeta())
     i = IndexerState()
     i.last_block = start_block
+    i.last_stats_block = start_block
     s.add(i)
     s.commit()
     s.close()
