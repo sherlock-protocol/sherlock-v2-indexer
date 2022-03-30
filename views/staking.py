@@ -1,5 +1,6 @@
 from web3 import Web3
 
+import settings
 from flask_app import app
 from models import IndexerState, Session, StakingPositions
 from utils import calculate_increment
@@ -21,12 +22,15 @@ def staking_positions(user):
     apy = indexer_data.apy
 
     for pos in positions:
-        pos["usdc_increment"] = calculate_increment(pos["usdc"], apy)
+        position_apy = 0.15 if pos["id"] <= settings.LAST_POSITION_ID_FOR_15PERC_APY else apy
+
+        pos["usdc_increment"] = calculate_increment(pos["usdc"], position_apy)
         pos["usdc"] = round(pos["usdc"] * indexer_data.balance_factor)
+        pos["usdc_apy"] = round(position_apy * 100, 6)
 
     return {
         "ok": True,
         "positions_usdc_last_updated": int(indexer_data.last_time.timestamp()),
-        "usdc_apy": round(indexer_data.apy * 100, 6),
+        "usdc_apy": round(apy * 100, 6),
         "data": positions,
     }
