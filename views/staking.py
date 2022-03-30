@@ -3,8 +3,6 @@ from web3 import Web3
 from flask_app import app
 from models import IndexerState, Session, StakingPositions
 from utils import calculate_increment
-from settings import LAST_POSITION_ID_FOR_15PERC_APY
-
 
 @app.route("/positions/<user>/staking")
 def staking_positions(user):
