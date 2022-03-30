@@ -22,7 +22,6 @@ def staking_positions(user):
     apy = indexer_data.apy
 
     for pos in positions:
-        print(pos)
         position_apy = (
             0.15 if (pos["id"] <= settings.LAST_POSITION_ID_FOR_15PERC_APY and pos["restake_count"] == 0) else apy
         )
