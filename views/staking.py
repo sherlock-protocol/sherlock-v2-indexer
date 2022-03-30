@@ -4,6 +4,7 @@ from flask_app import app
 from models import IndexerState, Session, StakingPositions
 from utils import calculate_increment
 
+
 @app.route("/positions/<user>/staking")
 def staking_positions(user):
     if not Web3.isChecksumAddress(user):
