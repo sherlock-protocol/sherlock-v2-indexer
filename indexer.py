@@ -29,6 +29,8 @@ class Indexer:
         self.block_last_updated = 0
         self.events = {
             settings.CORE_WSS.events.Transfer: self.Transfer.new,
+            settings.CORE_WSS.events.Restaked: self.Restaked.new,
+            settings.CORE_WSS.events.ArbRestaked: self.Restaked.new,
             settings.SHER_BUY_WSS.events.Purchase: self.Purchase.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolAdded: self.ProtocolAdded.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolAgentTransfer: self.ProtocolAgentTransfer.new,
@@ -152,6 +154,13 @@ class Indexer:
             timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
             Protocol.remove(session, protocol_bytes_id, timestamp)
+
+    class Restaked:
+        def new(self, session, indx, block, args):
+            logging.debug("[+] Restaked")
+            token_id = args["tokenID"]
+
+            StakingPositions.restake(session, token_id)
 
     def start(self):
         # get last block indexed from database
