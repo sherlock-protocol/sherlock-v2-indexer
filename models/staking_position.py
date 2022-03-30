@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timedelta
 
-from sqlalchemy import Column, String, desc
+from sqlalchemy import Column, Integer, String, desc
 from sqlalchemy.dialects.postgresql import BIGINT, NUMERIC, TIMESTAMP
 
 import settings
@@ -16,6 +16,7 @@ class StakingPositions(Base):
     lockup_end = Column(TIMESTAMP, nullable=False)
     usdc = Column(NUMERIC(78), nullable=False)
     sher = Column(NUMERIC(78), nullable=False)
+    restake_count = Column(Integer, nullable=False, default=0, server_default="0")
 
     @staticmethod
     def get_for_factor(session):
