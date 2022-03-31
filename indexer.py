@@ -38,6 +38,9 @@ class Indexer:
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemoved: self.ProtocolRemoved.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
         }
+        self.intervals = {
+            self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL
+        }
 
     # Also get called after listening to events with `end_block`
     def calc_factors(self, session, indx, block):
@@ -68,20 +71,13 @@ class Indexer:
         indx.block_last_updated = block
         indx.last_time = datetime.fromtimestamp(timestamp)
 
-    def calc_stats(self, session, indx, block):
-        last_block = indx.last_stats_block
-        blocks_between_calls = settings.INDEXER_STATS_BLOCKS_PER_CALL
-
-        if (last_block + blocks_between_calls > block):
+    def calc_tvl(self, session, indx, block):
+        if self.block_last_updated == block:
             return
-
         timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
         tvl = settings.CORE_WSS.functions.totalTokenBalanceStakers().call(block_identifier=block)
 
         StatsTVL.insert(session, block, timestamp, tvl)
-
-        indx.last_stats_block = block
-        indx.last_stats_time = timestamp
 
     class Transfer:
         def new(self, session, indx, block, args):
@@ -196,8 +192,8 @@ class Indexer:
                 indx = s.query(IndexerState).first()
 
                 self.index_events_time(s, indx, start_block, end_block)
-                self.calc_factors(s, indx, end_block)
-                self.calc_stats(s, indx, end_block)
+                self.index_intervals(s, indx, end_block)
+                self.calc_factors(s, indx, current_block)
 
                 start_block = end_block + 1
                 indx.last_block = start_block
@@ -205,6 +201,21 @@ class Indexer:
             except Exception as e:
                 logging.exception("Encountered exception %s" % e)
                 time.sleep(settings.INDEXER_SLEEP_BETWEEN_CALL)
+
+    def index_intervals(self, session, indx, block):
+        for func, interval in self.intervals.items():
+            if block % interval >= settings.INDEXER_BLOCKS_PER_CALL:
+                continue
+
+            try:
+                func(session, indx, block)
+            except IntegrityError:
+                logging.warning(
+                    "Could not process stats on block %s",
+                    block,
+                )
+                session.rollback()
+                continue
 
     def index_events_time(self, session, indx, start_block, end_block):
         start = datetime.utcnow()
