@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from pstats import Stats
 
 from sqlalchemy import Column, Integer
 from sqlalchemy.dialects.postgresql import TIMESTAMP, NUMERIC, BIGINT
@@ -26,7 +27,7 @@ class StatsTVL(Base):
 
     @staticmethod
     def find_all(session):
-        return session.query(StatsTVL).all()
+        return session.query(StatsTVL).order_by(StatsTVL.timestamp.asc()).limit(365).all()
 
     def to_dict(self):
         """Converts object to dict.
