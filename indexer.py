@@ -22,8 +22,7 @@ from utils import time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
-logging.basicConfig(level=logging.INFO)
-# logging.basicConfig(filename="output.log", level=logging.INFO)
+logging.basicConfig(filename="output.log", level=logging.INFO)
 
 
 class Indexer:
@@ -41,7 +40,6 @@ class Indexer:
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.calc_factors: 1
         }
-        self.intervals_last_block = 0
 
     # Also get called after listening to events with `end_block`
     def calc_factors(self, session, indx, block):
@@ -177,15 +175,14 @@ class Indexer:
                 if end_block >= current_block:
                     end_block = current_block
 
-                # If think update apy factor here? So we can already use in the events
-                indx = s.query(IndexerState).first()
-
-                self.index_intervals(s, indx, current_block)
-
                 if start_block > end_block:
                     time.sleep(settings.INDEXER_SLEEP_BETWEEN_CALL)
                     continue
 
+                # If think update apy factor here? So we can already use in the events
+                indx = s.query(IndexerState).first()
+
+                self.index_intervals(s, indx, end_block)
                 self.index_events_time(s, indx, start_block, end_block)
 
                 start_block = end_block + 1
@@ -196,9 +193,6 @@ class Indexer:
                 time.sleep(settings.INDEXER_SLEEP_BETWEEN_CALL)
 
     def index_intervals(self, session, indx, block):
-        if (self.intervals_last_block == block):
-            return
-
         for func, interval in self.intervals.items():
             if block % interval >= settings.INDEXER_BLOCKS_PER_CALL:
                 continue
@@ -212,8 +206,6 @@ class Indexer:
                 )
                 session.rollback()
                 continue
-
-        self.intervals_last_block = block
 
     def index_events_time(self, session, indx, start_block, end_block):
         start = datetime.utcnow()
