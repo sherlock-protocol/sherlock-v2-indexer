@@ -60,3 +60,6 @@ SHER_CLAIM_AT = SHER_CLAIM_WSS.functions.newEntryDeadline().call() + 60 * 60 * 2
 INDEXER_BLOCKS_PER_CALL = 5
 INDEXER_STATS_BLOCKS_PER_CALL = 6400
 INDEXER_SLEEP_BETWEEN_CALL = config("INDEXER_SLEEP_BETWEEN_CALL", default=5.0, cast=float)
+
+# Will be used to flag the last position ID that get's 15% apy
+LAST_POSITION_ID_FOR_15PERC_APY = config("LAST_POSITION_ID_FOR_15PERC_APY", default=10000000000000)

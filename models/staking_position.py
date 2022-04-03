@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timedelta
 
-from sqlalchemy import Column, String, desc
+from sqlalchemy import Column, Integer, String, desc
 from sqlalchemy.dialects.postgresql import BIGINT, NUMERIC, TIMESTAMP
 
 import settings
@@ -16,6 +16,7 @@ class StakingPositions(Base):
     lockup_end = Column(TIMESTAMP, nullable=False)
     usdc = Column(NUMERIC(78), nullable=False)
     sher = Column(NUMERIC(78), nullable=False)
+    restake_count = Column(Integer, nullable=False, default=0, server_default="0")
 
     @staticmethod
     def get_for_factor(session):
@@ -57,6 +58,10 @@ class StakingPositions(Base):
     @staticmethod
     def get(session, owner):
         return session.query(StakingPositions).filter_by(owner=owner).order_by(desc(StakingPositions.lockup_end)).all()
+
+    @staticmethod
+    def restake(session, id):
+        session.query(StakingPositions).filter_by(id=id).update({"restake_count": StakingPositions.restake_count + 1})
 
     def get_balance_data(self, block):
         usdc = settings.CORE_WSS.functions.tokenBalanceOf(self.id).call(block_identifier=block)
