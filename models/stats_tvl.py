@@ -1,6 +1,5 @@
 import json
 from datetime import datetime
-from pstats import Stats
 
 from sqlalchemy import Column, Integer
 from sqlalchemy.dialects.postgresql import TIMESTAMP, NUMERIC, BIGINT
