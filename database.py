@@ -3,6 +3,16 @@ import sys
 from models import IndexerState, Session, StakingPositionsMeta
 
 
+def run(start_block):
+    s = Session()
+    s.add(StakingPositionsMeta())
+    i = IndexerState()
+    i.last_block = start_block
+    s.add(i)
+    s.commit()
+    s.close()
+
+
 def main():
     if len(sys.argv) != 2:
         sys.exit("Usage: python database.py <start-block>")
@@ -11,13 +21,7 @@ def main():
     except ValueError:
         sys.exit("Usage: python database.py <start-block>")
 
-    s = Session()
-    s.add(StakingPositionsMeta())
-    i = IndexerState()
-    i.last_block = start_block
-    s.add(i)
-    s.commit()
-    s.close()
+    run(start_block)
 
 
 if __name__ == "__main__":
