@@ -25,8 +25,8 @@ class StatsTVL(Base):
         session.add(tvl)
 
     @staticmethod
-    def find_all(session):
-        return session.query(StatsTVL).order_by(StatsTVL.timestamp.asc()).limit(365).all()
+    def find_all(session, offset, limit):
+        return session.query(StatsTVL).order_by(StatsTVL.timestamp.asc()).offset(offset).limit(limit).all()
 
     def to_dict(self):
         """Converts object to dict.

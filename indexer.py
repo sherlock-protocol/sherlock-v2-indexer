@@ -6,7 +6,6 @@ from decimal import Decimal, getcontext
 
 from sqlalchemy.exc import IntegrityError
 from web3.constants import ADDRESS_ZERO
-from models.stats_tvl import StatsTVL
 
 import settings
 from models import (
@@ -17,6 +16,7 @@ from models import (
     Session,
     StakingPositions,
     StakingPositionsMeta,
+    StatsTVL
 )
 from utils import time_delta_apy
 
@@ -191,8 +191,11 @@ class Indexer:
                 # If think update apy factor here? So we can already use in the events
                 indx = s.query(IndexerState).first()
 
-                self.index_intervals(s, indx, end_block)
+                # self.index_events_time needs to be executed first.
+                # The Transfer updates meta.usdc_last_updated on line with StakingPositionsMeta.update.
+                # This variable is again uses in calc_factors with position_timedelta = timestamp - meta.usdc_last_updated.timestamp()
                 self.index_events_time(s, indx, start_block, end_block)
+                self.index_intervals(s, indx, end_block)
 
                 start_block = end_block + 1
                 indx.last_block = start_block
