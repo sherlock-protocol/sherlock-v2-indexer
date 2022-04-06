@@ -25,6 +25,9 @@ def parse_args():
         type=int,
         required=True,
     )
+    parser.add_argument(
+        "-s", "--service", dest="service", help="The name of the service running the API", required=True
+    )
 
     return parser.parse_args()
 
@@ -203,8 +206,17 @@ def start_new_indexer():
     logging.info(f"[+] New indexer process started {pid}")
 
 
-def restart_service():
-    logging.info("[+] Restarting API service...")
+def restart_service(service: str):
+    """Restart API service.
+
+    Args:
+        service (str): Name of service running the API
+    """
+
+    logging.info(f"[+] Restarting API service {service}...")
+
+    command = f"sudo systemctl restart {service}"
+    run_shell_command(command)
 
 
 def main():
@@ -238,7 +250,7 @@ def main():
     start_new_indexer()
 
     # Restart API service
-    restart_service()
+    restart_service(args.service)
 
 
 if __name__ == "__main__":
