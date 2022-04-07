@@ -16,7 +16,7 @@ from models import (
     Session,
     StakingPositions,
     StakingPositionsMeta,
-    StatsTVL
+    StatsTVL,
 )
 from utils import time_delta_apy
 
@@ -38,10 +38,7 @@ class Indexer:
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemoved: self.ProtocolRemoved.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
         }
-        self.intervals = {
-            self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
-            self.calc_factors: 1
-        }
+        self.intervals = {self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL, self.calc_factors: 1}
 
     # Also get called after listening to events with `end_block`
     def calc_factors(self, session, indx, block):
@@ -193,7 +190,8 @@ class Indexer:
 
                 # self.index_events_time needs to be executed first.
                 # The Transfer updates meta.usdc_last_updated on line with StakingPositionsMeta.update.
-                # This variable is again uses in calc_factors with position_timedelta = timestamp - meta.usdc_last_updated.timestamp()
+                # This variable is again uses in calc_factors with
+                # position_timedelta = timestamp - meta.usdc_last_updated.timestamp()
                 self.index_events_time(s, indx, start_block, end_block)
                 self.index_intervals(s, indx, end_block)
 
