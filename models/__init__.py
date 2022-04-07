@@ -5,6 +5,7 @@ from .protocol import Protocol
 from .protocol_premium import ProtocolPremium
 from .staking_position import StakingPositions
 from .staking_positions_meta import StakingPositionsMeta
+from .stats_tvl import StatsTVL
 
 __all__ = [
     Base,
@@ -16,4 +17,5 @@ __all__ = [
     IndexerState,
     Protocol,
     ProtocolPremium,
+    StatsTVL
 ]

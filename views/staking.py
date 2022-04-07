@@ -22,7 +22,9 @@ def staking_positions(user):
     apy = indexer_data.apy
 
     for pos in positions:
-        position_apy = 0.15 if pos["id"] <= settings.LAST_POSITION_ID_FOR_15PERC_APY else apy
+        position_apy = (
+            0.15 if (pos["id"] <= settings.LAST_POSITION_ID_FOR_15PERC_APY and pos["restake_count"] == 0) else apy
+        )
 
         pos["usdc_increment"] = calculate_increment(pos["usdc"], position_apy)
         pos["usdc"] = round(pos["usdc"] * indexer_data.balance_factor)
