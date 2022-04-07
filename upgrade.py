@@ -7,6 +7,8 @@ from datetime import datetime
 from threading import Thread
 from time import sleep
 
+from sqlalchemy.engine import Connection
+
 import settings
 from alembic import command
 from alembic.config import Config
@@ -32,8 +34,11 @@ def parse_args():
     return parser.parse_args()
 
 
-def create_new_database() -> str:
+def create_new_database(connection: Connection) -> str:
     """Creates a new database
+
+    Args:
+        connection (Connection): Live DB connection
 
     Returns:
         str: The name of the newly created database
@@ -43,15 +48,11 @@ def create_new_database() -> str:
     # Generate the name by apppending current timestamp
     new_db_name = "indexer_" + str(int(datetime.now().timestamp()))
 
-    # Create db connection
-    conn = settings.DB.connect()
-
     # End open transaction using COMMIT (cannot create databases inside transactions)
-    conn.execute("commit")
+    connection.execute("commit")
 
     # Create the database
-    conn.execute("create database " + new_db_name)
-    conn.close()
+    connection.execute("create database " + new_db_name)
 
     logging.info("[ ] Created database " + new_db_name)
 
@@ -102,29 +103,38 @@ def initialize_database(block_number):
     database.run(block_number)
 
 
-def reindex():
-    """Index events until up to date"""
+def reindex(connection: Connection):
+    """Index events until up to date
+
+    Args:
+        connection (Connection): Live DB connection
+    """
     from indexer import Indexer
     from models import IndexerState, Session
 
-    current_block_number = settings.WEB3_WSS.eth.blockNumber
-    logging.info(f"[+] Indexing until block {current_block_number}")
+    logging.info("[+] Indexing until up to date with live indexer")
 
-    indexer = Indexer()
+    # We instantiate an indexer that processes chunks of 2k blocks
+    indexer = Indexer(blocks_per_call=2000)
     thread = Thread(name="Indexer", target=indexer.start)
     thread.start()
 
     # Wait for the DB to get up to date
-    with Session() as s:
-        while True:
-            s.expire_all()
-            state = s.query(IndexerState).first()
-            logging.info(f"[+] - Last indexed block: {state.last_block}")
+    with Session(bind=connection) as live_db:
+        with Session() as new_db:
+            while True:
+                # Fetch live block number
+                live_block_number = live_db.query(IndexerState).first().last_block
+                current_block_number = new_db.query(IndexerState).first().last_block
 
-            if state.last_block >= current_block_number:
-                break
+                logging.info(
+                    f"[+] - Last indexed block: {current_block_number}, Live indexed block: {live_block_number}"
+                )
 
-            sleep(2)
+                if current_block_number >= live_block_number:
+                    break
+
+                sleep(2)
 
     thread.do_run = False
     thread.join()
@@ -222,8 +232,11 @@ def restart_service(service: str):
 def main():
     args = parse_args()
 
+    # Create connection to the old DB
+    connection = settings.DB.connect()
+
     # Create the new database
-    db_name = create_new_database()
+    db_name = create_new_database(connection)
 
     # Update .env
     update_env(db_name)
@@ -235,7 +248,7 @@ def main():
     initialize_database(args.block)
 
     # Run indexer on new database until up to date
-    reindex()
+    reindex(connection)
 
     # Fetch indexer PID
     pid = find_indexer_pid()
@@ -248,6 +261,9 @@ def main():
 
     # Spawn another indexer
     start_new_indexer()
+
+    # Close old DB connection
+    connection.close()
 
     # Restart API service
     restart_service(args.service)
