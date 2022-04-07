@@ -46,6 +46,9 @@ class Indexer:
     def calc_factors(self, session, indx, block):
         meta = StakingPositionsMeta.get(session)
 
+        if meta.usdc_last_updated == datetime.min:
+            return
+
         timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
         position_timedelta = timestamp - meta.usdc_last_updated.timestamp()
         if position_timedelta == 0:
