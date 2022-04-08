@@ -211,7 +211,8 @@ class Indexer:
 
                 # self.index_events_time needs to be executed first.
                 # The Transfer updates meta.usdc_last_updated on line with StakingPositionsMeta.update.
-                # This variable is again uses in calc_factors with position_timedelta = timestamp - meta.usdc_last_updated.timestamp()
+                # This variable is again uses in calc_factors with
+                # position_timedelta = timestamp - meta.usdc_last_updated.timestamp()
                 self.index_events_time(s, indx, start_block, end_block)
                 self.index_intervals(s, indx, end_block)
 
