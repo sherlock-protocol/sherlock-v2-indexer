@@ -23,7 +23,7 @@ from utils import time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(filename="output.log", level=logging.INFO)
 
 
 class Indexer:
