@@ -18,7 +18,7 @@ from models import (
     StakingPositionsMeta,
     StatsTVL,
 )
-from utils import time_delta_apy
+from utils import get_event_logs_in_range, time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
@@ -246,8 +246,8 @@ class Indexer:
     def index_events(self, session, indx, start_block, end_block):
         # Commit on every insert so indexer doesn't halt on single failure
         for event, func in self.events.items():
-            filter = event.createFilter(fromBlock=start_block, toBlock=end_block)
-            for entry in filter.get_all_entries():
+            entries = get_event_logs_in_range(event, start_block, end_block)
+            for entry in entries:
                 try:
                     func(self, session, indx, entry["blockNumber"], entry["args"])
                     session.commit()
