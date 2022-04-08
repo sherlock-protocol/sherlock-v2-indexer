@@ -214,7 +214,7 @@ def start_new_indexer(screen_name: str):
     run_shell_command(command)
 
     # Let process start
-    sleep(2)
+    sleep(5)
 
     pid = find_indexer_pid()
     if not pid:
