@@ -34,10 +34,11 @@ def parse_args():
     return parser.parse_args()
 
 
-def create_new_database(connection: Connection) -> str:
+def create_new_database(prefix: str, connection: Connection) -> str:
     """Creates a new database
 
     Args:
+        prefix (str): DB name prefix
         connection (Connection): Live DB connection
 
     Returns:
@@ -46,7 +47,7 @@ def create_new_database(connection: Connection) -> str:
     logging.info("[+] Creating new database...")
 
     # Generate the name by apppending current timestamp
-    new_db_name = "indexer_" + str(int(datetime.now().timestamp()))
+    new_db_name = f"{prefix}_{str(int(datetime.now().timestamp()))}"
 
     # End open transaction using COMMIT (cannot create databases inside transactions)
     connection.execute("commit")
@@ -243,7 +244,7 @@ def main():
     connection = settings.DB.connect()
 
     # Create the new database
-    db_name = create_new_database(connection)
+    db_name = create_new_database(args.service, connection)
 
     # Update .env
     update_env(db_name)
