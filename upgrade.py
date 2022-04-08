@@ -199,11 +199,18 @@ def stop_indexer_process(pid: str):
         sleep(2)
 
 
-def start_new_indexer():
-    """Start a new indexer."""
+def start_new_indexer(screen_name: str):
+    """Start a new indexer.
+
+    Args:
+        screen_name (str): Newly created screen session name
+
+    Raises:
+        Exception: Error when starting a new indexer process
+    """
     logging.info("[+] Starting new indexer process...")
 
-    command = "screen -d -m python indexer.py"
+    command = f"screen -S {screen_name} -d -m python indexer.py"
     run_shell_command(command)
 
     # Let process start
@@ -260,7 +267,7 @@ def main():
     stop_indexer_process(pid)
 
     # Spawn another indexer
-    start_new_indexer()
+    start_new_indexer(args.service)
 
     # Close old DB connection
     connection.close()
