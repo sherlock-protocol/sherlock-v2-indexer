@@ -170,7 +170,7 @@ def find_indexer_pid() -> str:
     Returns:
         str: Indexer's process PID
     """
-    command = "lsof -u acelasi -c python -d cwd -a -t -f -- ."
+    command = "lsof -u evert -c python -d cwd -a -t -f -- ."
     output = run_shell_command(command)
     pids = re.findall(r"\d+", output)
 
