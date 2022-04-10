@@ -16,9 +16,9 @@ from models import (
     Session,
     StakingPositions,
     StakingPositionsMeta,
-    StatsTVL
+    StatsTVL,
 )
-from utils import time_delta_apy
+from utils import get_event_logs_in_range, time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
@@ -26,7 +26,12 @@ logging.basicConfig(filename="output.log", level=logging.INFO)
 
 
 class Indexer:
-    def __init__(self):
+    blocks_per_call = settings.INDEXER_BLOCKS_PER_CALL
+
+    def __init__(self, blocks_per_call=None):
+        if blocks_per_call:
+            self.blocks_per_call = blocks_per_call
+
         self.events = {
             settings.CORE_WSS.events.Transfer: self.Transfer.new,
             settings.CORE_WSS.events.Restaked: self.Restaked.new,
@@ -38,14 +43,14 @@ class Indexer:
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemoved: self.ProtocolRemoved.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
         }
-        self.intervals = {
-            self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
-            self.calc_factors: 1
-        }
+        self.intervals = {self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL, self.calc_factors: 1}
 
     # Also get called after listening to events with `end_block`
     def calc_factors(self, session, indx, block):
         meta = StakingPositionsMeta.get(session)
+
+        if meta.usdc_last_updated == datetime.min:
+            return
 
         timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
         position_timedelta = timestamp - meta.usdc_last_updated.timestamp()
@@ -178,7 +183,7 @@ class Indexer:
                 s = Session()
 
                 # Process 5 blocks each round
-                end_block = start_block + settings.INDEXER_BLOCKS_PER_CALL - 1
+                end_block = start_block + self.blocks_per_call - 1
                 current_block = settings.WEB3_WSS.eth.blockNumber
 
                 if end_block >= current_block:
@@ -193,7 +198,8 @@ class Indexer:
 
                 # self.index_events_time needs to be executed first.
                 # The Transfer updates meta.usdc_last_updated on line with StakingPositionsMeta.update.
-                # This variable is again uses in calc_factors with position_timedelta = timestamp - meta.usdc_last_updated.timestamp()
+                # This variable is again uses in calc_factors with
+                # position_timedelta = timestamp - meta.usdc_last_updated.timestamp()
                 self.index_events_time(s, indx, start_block, end_block)
                 self.index_intervals(s, indx, end_block)
 
@@ -206,7 +212,7 @@ class Indexer:
 
     def index_intervals(self, session, indx, block):
         for func, interval in self.intervals.items():
-            if block % interval >= settings.INDEXER_BLOCKS_PER_CALL:
+            if block % interval >= self.blocks_per_call:
                 continue
 
             try:
@@ -240,8 +246,8 @@ class Indexer:
     def index_events(self, session, indx, start_block, end_block):
         # Commit on every insert so indexer doesn't halt on single failure
         for event, func in self.events.items():
-            filter = event.createFilter(fromBlock=start_block, toBlock=end_block)
-            for entry in filter.get_all_entries():
+            entries = get_event_logs_in_range(event, start_block, end_block)
+            for entry in entries:
                 try:
                     func(self, session, indx, entry["blockNumber"], entry["args"])
                     session.commit()
