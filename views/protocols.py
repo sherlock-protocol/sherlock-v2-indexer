@@ -5,8 +5,6 @@ from models.protocol_coverage import ProtocolCoverage
 
 @app.route("/protocols")
 def get_protocols():
-    results = []
-
     with Session() as s:
         protocols = (
             s.query(ProtocolPremium, Protocol)
@@ -18,14 +16,13 @@ def get_protocols():
             )
         )
 
-        for premium, protocol in protocols:
-            coverages = ProtocolCoverage.get_protocol_coverages(s, protocol.id)
-            results.append(([premium, protocol, coverages]))
+        premiums, protocols = zip(*protocols)
+        coverages = [ProtocolCoverage.get_protocol_coverages(s, protocol.id) for protocol in protocols]
 
     return {
         "ok": True,
         "data": [
             {**protocol.to_dict(), **premium.to_dict(), "coverages": [{**coverage.to_dict()} for coverage in coverages]}
-            for premium, protocol, coverages in results
+            for premium, protocol, coverages in zip(premiums, protocols, coverages)
         ],
     }
