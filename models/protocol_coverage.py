@@ -17,6 +17,16 @@ class ProtocolCoverage(Base):
     claimable_until = Column(TIMESTAMP, nullable=True)
 
     @staticmethod
+    def get_protocol_coverages(session, protocol_id):
+        return (
+            session.query(ProtocolCoverage)
+            .filter_by(protocol_id=protocol_id)
+            .order_by(ProtocolCoverage.coverage_amount_set_at.desc())
+            .limit(2)
+            .all()
+        )
+
+    @staticmethod
     def insert(session, protocol_id, coverage_amount, timestamp):
         coverage_amount_set_at = datetime.fromtimestamp(timestamp)
 
@@ -32,13 +42,7 @@ class ProtocolCoverage(Base):
         updated_at = datetime.fromtimestamp(timestamp)
 
         # Fetch current (and previous, if exists) coverage amounts
-        existing_coverage_amounts = (
-            session.query(ProtocolCoverage)
-            .filter_by(protocol_id=protocol_id)
-            .order_by(ProtocolCoverage.coverage_amount_set_at.desc())
-            .limit(2)
-            .all()
-        )
+        existing_coverage_amounts = ProtocolCoverage.get_protocol_coverages(session, protocol_id)
 
         if new_coverage_amount == 0:
             # Protocol has been removed, but it still has
@@ -61,4 +65,5 @@ class ProtocolCoverage(Base):
             "coverage_amount_set_at": int(self.coverage_amount_set_at.timestamp())
             if self.coverage_amount_set_at
             else None,
+            "claimable_until": int(self.claimable_until.timestamp()) if self.claimable_until else None,
         }
