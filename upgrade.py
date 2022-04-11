@@ -211,7 +211,7 @@ def start_new_indexer(screen_name: str):
     """
     logging.info("[+] Starting new indexer process...")
 
-    command = f"screen -S {screen_name} -d -m python indexer.py"
+    command = f"screen -S {screen_name} -d -m ./venv/bin/python indexer.py"
     run_shell_command(command)
 
     # Let process start
