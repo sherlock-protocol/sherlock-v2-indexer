@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy import Column, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
 
 from models.base import Base
@@ -8,27 +8,17 @@ from models.base import Base
 
 class ProtocolCoverage(Base):
     __tablename__ = "protocols_coverages"
+    __table_args__ = (UniqueConstraint("protocol_id", "coverage_amount", "coverage_amount_set_at"),)
 
     id = Column(Integer, primary_key=True)
     protocol_id = Column(Integer, ForeignKey("protocols.id"), nullable=False)
     coverage_amount = Column(NUMERIC(78), nullable=False)
     coverage_amount_set_at = Column(TIMESTAMP, nullable=False)
+    claimable_until = Column(TIMESTAMP, nullable=True)
 
     @staticmethod
     def insert(session, protocol_id, coverage_amount, timestamp):
         coverage_amount_set_at = datetime.fromtimestamp(timestamp)
-
-        # Check if coverage amount change has already been saved
-        already_exists = (
-            session.query(ProtocolCoverage)
-            .filter_by(
-                protocol_id=protocol_id, coverage_amount=coverage_amount, coverage_amount_set_at=coverage_amount_set_at
-            )
-            .one_or_none()
-        )
-
-        if already_exists:
-            return
 
         protocol_coverage = ProtocolCoverage()
         protocol_coverage.protocol_id = protocol_id

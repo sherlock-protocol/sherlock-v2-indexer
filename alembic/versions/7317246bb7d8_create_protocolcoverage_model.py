@@ -25,11 +25,13 @@ def upgrade():
         sa.Column("protocol_id", sa.Integer(), nullable=False),
         sa.Column("coverage_amount", sa.NUMERIC(precision=78), nullable=False),
         sa.Column("coverage_amount_set_at", postgresql.TIMESTAMP(), nullable=False),
+        sa.Column("claimable_until", postgresql.TIMESTAMP(), nullable=True),
         sa.ForeignKeyConstraint(
             ["protocol_id"],
             ["protocols.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("protocol_id", "coverage_amount", "coverage_amount_set_at"),
     )
     # ### end Alembic commands ###
 
