@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import Column, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
@@ -26,6 +26,34 @@ class ProtocolCoverage(Base):
         protocol_coverage.coverage_amount_set_at = coverage_amount_set_at
 
         session.add(protocol_coverage)
+
+    @staticmethod
+    def update(session, protocol_id, new_coverage_amount, timestamp):
+        updated_at = datetime.fromtimestamp(timestamp)
+
+        # Fetch current (and previous, if exists) coverage amounts
+        existing_coverage_amounts = (
+            session.query(ProtocolCoverage)
+            .filter_by(protocol_id=protocol_id)
+            .order_by(ProtocolCoverage.coverage_amount_set_at.desc())
+            .limit(2)
+            .all()
+        )
+
+        if new_coverage_amount == 0:
+            # Protocol has been removed, but it still has
+            # a window of 7 more days to submit a claim.
+
+            # Set claimable_until amounts
+            for item in existing_coverage_amounts:
+                item.claimable_until = updated_at + timedelta(days=7)
+        else:
+            # Protocol's coverage amount has changed.
+            if len(existing_coverage_amounts) == 2:
+                # Previous coverage is no longer available for claiming
+                existing_coverage_amounts[1].claimable_until = updated_at
+
+            ProtocolCoverage.insert(session, protocol_id, new_coverage_amount, timestamp)
 
     def to_dict(self):
         return {

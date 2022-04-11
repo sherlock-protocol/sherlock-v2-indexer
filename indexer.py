@@ -187,7 +187,7 @@ class Indexer:
 
             timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
-            ProtocolCoverage.insert(session, protocol.id, coverage_amount, timestamp)
+            ProtocolCoverage.update(session, protocol.id, coverage_amount, timestamp)
 
     def start(self):
         # get last block indexed from database
