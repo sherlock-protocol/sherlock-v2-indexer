@@ -19,7 +19,7 @@ from models import (
     StakingPositionsMeta,
     StatsTVL,
 )
-from utils import time_delta_apy
+from utils import get_event_logs_in_range, time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
@@ -27,7 +27,12 @@ logging.basicConfig(filename="output.log", level=logging.INFO)
 
 
 class Indexer:
-    def __init__(self):
+    blocks_per_call = settings.INDEXER_BLOCKS_PER_CALL
+
+    def __init__(self, blocks_per_call=None):
+        if blocks_per_call:
+            self.blocks_per_call = blocks_per_call
+
         self.events = {
             settings.CORE_WSS.events.Transfer: self.Transfer.new,
             settings.CORE_WSS.events.Restaked: self.Restaked.new,
@@ -196,7 +201,7 @@ class Indexer:
                 s = Session()
 
                 # Process 5 blocks each round
-                end_block = start_block + settings.INDEXER_BLOCKS_PER_CALL - 1
+                end_block = start_block + self.blocks_per_call - 1
                 current_block = settings.WEB3_WSS.eth.blockNumber
 
                 if end_block >= current_block:
@@ -225,7 +230,7 @@ class Indexer:
 
     def index_intervals(self, session, indx, block):
         for func, interval in self.intervals.items():
-            if block % interval >= settings.INDEXER_BLOCKS_PER_CALL:
+            if block % interval >= self.blocks_per_call:
                 continue
 
             try:
@@ -259,8 +264,8 @@ class Indexer:
     def index_events(self, session, indx, start_block, end_block):
         # Commit on every insert so indexer doesn't halt on single failure
         for event, func in self.events.items():
-            filter = event.createFilter(fromBlock=start_block, toBlock=end_block)
-            for entry in filter.get_all_entries():
+            entries = get_event_logs_in_range(event, start_block, end_block)
+            for entry in entries:
                 try:
                     func(self, session, indx, entry["blockNumber"], entry["args"])
                     session.commit()
