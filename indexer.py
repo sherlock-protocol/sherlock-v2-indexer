@@ -12,6 +12,7 @@ from models import (
     FundraisePositions,
     IndexerState,
     Protocol,
+    ProtocolCoverage,
     ProtocolPremium,
     Session,
     StakingPositions,
@@ -39,6 +40,7 @@ class Indexer:
             settings.SHER_BUY_WSS.events.Purchase: self.Purchase.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolAdded: self.ProtocolAdded.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolAgentTransfer: self.ProtocolAgentTransfer.new,
+            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolUpdated: self.ProtocolUpdated.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolPremiumChanged: self.ProtocolPremiumChanged.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemoved: self.ProtocolRemoved.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
@@ -170,6 +172,22 @@ class Indexer:
             token_id = args["tokenID"]
 
             StakingPositions.restake(session, token_id)
+
+    class ProtocolUpdated:
+        def new(self, session, indx, block, args):
+            logging.debug("[+] ProtocolUpdated")
+            print(args)
+
+            protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
+            coverage_amount = args["coverageAmount"]
+
+            protocol = Protocol.get(session, protocol_bytes_id)
+            if not protocol:
+                return
+
+            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+
+            ProtocolCoverage.update(session, protocol.id, coverage_amount, timestamp)
 
     def start(self):
         # get last block indexed from database
