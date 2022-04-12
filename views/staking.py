@@ -37,5 +37,5 @@ def staking_positions(user=None):
         "ok": True,
         "positions_usdc_last_updated": int(indexer_data.last_time.timestamp()),
         "usdc_apy": round(apy * 100, 6),
-        "data": positions if user else [],
+        "data": positions,
     }
