@@ -7,12 +7,15 @@ from utils import calculate_increment
 
 
 @app.route("/positions/<user>/staking")
-def staking_positions(user):
-    if not Web3.isChecksumAddress(user):
-        return {"ok": False, "error": "Argument should be checksummed address"}
+@app.route("/staking/<user>")
+@app.route("/staking")
+def staking_positions(user=None):
+    if user:
+        if not Web3.isChecksumAddress(user):
+            return {"ok": False, "error": "Argument should be checksummed address"}
 
     with Session() as s:
-        positions = StakingPositions.get(s, user)
+        positions = StakingPositions.get(s, user) if user else []
         indexer_data = s.query(IndexerState).first()
 
     # Transform positions in list of dictionaries
@@ -34,5 +37,5 @@ def staking_positions(user):
         "ok": True,
         "positions_usdc_last_updated": int(indexer_data.last_time.timestamp()),
         "usdc_apy": round(apy * 100, 6),
-        "data": positions,
+        "data": positions if user else [],
     }
