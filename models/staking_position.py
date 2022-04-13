@@ -53,7 +53,7 @@ class StakingPositions(Base):
 
     @staticmethod
     def delete(session, id):
-        session.query(StakingPositions).filter_by(id=id).one().delete()
+        session.query(StakingPositions).filter_by(id=id).delete()
 
     @staticmethod
     def get(session, owner):
