@@ -45,8 +45,10 @@ class Indexer:
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemoved: self.ProtocolRemoved.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
         }
+
+        # 268 blocks is roughly every hour on current Ethereum mainnet
         self.intervals = {self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
-                          self.calc_factors: 1, self.reset_apy_calc: 6400}
+                          self.calc_factors: 1, self.reset_apy_calc: 268}
 
     # Also get called after listening to events with `end_block`
     def calc_factors(self, session, indx, block):
