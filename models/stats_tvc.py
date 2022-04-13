@@ -17,12 +17,27 @@ class StatsTVC(Base):
 
     @staticmethod
     def insert(session, block, timestamp, value):
-        tvl = StatsTVC()
-        tvl.timestamp = timestamp
-        tvl.value = value
-        tvl.block = block
+        tvc = StatsTVC()
+        tvc.timestamp = timestamp
+        tvc.value = value
+        tvc.block = block
 
-        session.add(tvl)
+        session.add(tvc)
+
+    @staticmethod
+    def insert_from_delta(session, block, timestamp, delta):
+        last = session.query(StatsTVC).order_by(StatsTVC.timestamp.desc()).first()
+
+        tvc = StatsTVC()
+        tvc.timestamp = timestamp
+        tvc.block = block
+
+        if not last:
+            tvc.value = delta
+        else:
+            tvc.value = last.value + delta
+
+        session.add(tvc)
 
     @staticmethod
     def find_all(session, offset, limit):

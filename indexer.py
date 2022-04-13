@@ -18,6 +18,7 @@ from models import (
     StakingPositions,
     StakingPositionsMeta,
     StatsTVL,
+    StatsTVC
 )
 from utils import get_event_logs_in_range, time_delta_apy
 
