@@ -45,7 +45,10 @@ class Indexer:
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemoved: self.ProtocolRemoved.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
         }
-        self.intervals = {self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL, self.calc_factors: 1}
+
+        # 268 blocks is roughly every hour on current Ethereum mainnet
+        self.intervals = {self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
+                          self.calc_factors: 1, self.reset_apy_calc: 268}
 
     # Also get called after listening to events with `end_block`
     def calc_factors(self, session, indx, block):
@@ -78,6 +81,16 @@ class Indexer:
         tvl = settings.CORE_WSS.functions.totalTokenBalanceStakers().call(block_identifier=block)
 
         StatsTVL.insert(session, block, timestamp, tvl)
+
+    def reset_apy_calc(self, session, indx, block):
+        # Do this call to get current `indx.balance_factor` value
+        self.calc_factors(session, indx, block)
+
+        # Update all staking positions with current factor
+        StakingPositionsMeta.update(session, block, indx.balance_factor)
+
+        # Reset factor
+        indx.balance_factor = Decimal(1)
 
     class Transfer:
         def new(self, session, indx, block, args):
