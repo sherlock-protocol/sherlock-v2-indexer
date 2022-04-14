@@ -125,10 +125,10 @@ class Indexer:
                 return
 
             # Update all database entries to be up to date with block
-            if self.calc_factors(session, indx, block):
-                if indx.balance_factor != Decimal(1):
-                    StakingPositionsMeta.update(session, block, indx.balance_factor)
-                    indx.balance_factor = Decimal(1)
+            self.calc_factors(session, indx, block)
+            if indx.balance_factor != Decimal(1):
+                StakingPositionsMeta.update(session, block, indx.balance_factor)
+                indx.balance_factor = Decimal(1)
 
             # Insert will retrieve active information (usdc, sher, lockup)
             StakingPositions.insert(
@@ -201,7 +201,7 @@ class Indexer:
             logging.debug("[+] Restaked")
             token_id = args["tokenID"]
 
-            StakingPositions.restake(session, token_id)
+            StakingPositions.restake(session, block, token_id)
 
     class ProtocolUpdated:
         def new(self, session, indx, block, args):
