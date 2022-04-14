@@ -4,7 +4,6 @@ import time
 from datetime import datetime, timedelta
 from decimal import Decimal, getcontext
 
-from sqlalchemy.exc import IntegrityError
 from web3.constants import ADDRESS_ZERO
 
 import settings
@@ -47,22 +46,40 @@ class Indexer:
         }
 
         # 268 blocks is roughly every hour on current Ethereum mainnet
-        self.intervals = {self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
-                          self.calc_factors: 1, self.reset_apy_calc: 268}
+        self.intervals = {
+            self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
+            self.calc_factors: 1,
+            self.reset_apy_calc: 268,
+        }
 
     # Also get called after listening to events with `end_block`
-    def calc_factors(self, session, indx, block):
+    def calc_factors(self, session, indx, block) -> bool:
+        """Compute the increase since last update.
+
+        Args:
+            session (Session): DB session
+            indx (IndexerState): Current indexer state
+            block (int): Block number
+
+        Returns:
+            bool: True, if computation was successful. False otherwise.
+        """
         meta = StakingPositionsMeta.get(session)
 
         if meta.usdc_last_updated == datetime.min:
-            return
+            return False
 
         timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
         position_timedelta = timestamp - meta.usdc_last_updated.timestamp()
         if position_timedelta == 0:
-            return
+            return False
 
         position = StakingPositions.get_for_factor(session)
+
+        # If there are no active staking positions, return
+        if not position:
+            return False
+
         usdc, factor = position.get_balance_data(block)
 
         # TODO make compounding?
@@ -76,6 +93,8 @@ class Indexer:
         indx.block_last_updated = block
         indx.last_time = datetime.fromtimestamp(timestamp)
 
+        return True
+
     def calc_tvl(self, session, indx, block):
         timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
         tvl = settings.CORE_WSS.functions.totalTokenBalanceStakers().call(block_identifier=block)
@@ -84,13 +103,12 @@ class Indexer:
 
     def reset_apy_calc(self, session, indx, block):
         # Do this call to get current `indx.balance_factor` value
-        self.calc_factors(session, indx, block)
+        if self.calc_factors(session, indx, block):
+            # Update all staking positions with current factor
+            StakingPositionsMeta.update(session, block, indx.balance_factor)
 
-        # Update all staking positions with current factor
-        StakingPositionsMeta.update(session, block, indx.balance_factor)
-
-        # Reset factor
-        indx.balance_factor = Decimal(1)
+            # Reset factor
+            indx.balance_factor = Decimal(1)
 
     class Transfer:
         def new(self, session, indx, block, args):
@@ -107,11 +125,10 @@ class Indexer:
                 return
 
             # Update all database entries to be up to date with block
-            self.calc_factors(session, indx, block)
-
-            if indx.balance_factor != Decimal(1):
-                StakingPositionsMeta.update(session, block, indx.balance_factor)
-                indx.balance_factor = Decimal(1)
+            if self.calc_factors(session, indx, block):
+                if indx.balance_factor != Decimal(1):
+                    StakingPositionsMeta.update(session, block, indx.balance_factor)
+                    indx.balance_factor = Decimal(1)
 
             # Insert will retrieve active information (usdc, sher, lockup)
             StakingPositions.insert(
@@ -248,7 +265,8 @@ class Indexer:
 
             try:
                 func(session, indx, block)
-            except IntegrityError:
+            except Exception as e:
+                logging.exception(e)
                 logging.warning(
                     "Could not process stats on block %s",
                     block,
@@ -282,7 +300,8 @@ class Indexer:
                 try:
                     func(self, session, indx, entry["blockNumber"], entry["args"])
                     session.commit()
-                except IntegrityError:
+                except Exception as e:
+                    logging.exception(e)
                     logging.warning(
                         "Could not process an %s event from smart contract with arguments %s",
                         entry["event"],
