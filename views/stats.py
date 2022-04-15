@@ -3,7 +3,7 @@ from flask import request
 from models import Session, StatsTVL, StatsTVC
 
 
-@app.route("/sherlock_stats")
+@app.route("/stats_tvl")
 def sherlock_stats():
     args = request.args
     with Session() as s:
