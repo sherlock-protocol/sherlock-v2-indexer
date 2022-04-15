@@ -1,10 +1,10 @@
 import logging
+from msilib.schema import Error
 import threading
 import time
 import requests
 from datetime import datetime, timedelta
 from decimal import Decimal, getcontext
-import csv
 
 from sqlalchemy.exc import IntegrityError
 from web3.constants import ADDRESS_ZERO
@@ -94,36 +94,39 @@ class Indexer:
         timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
         accumulated_tvc_for_block = 0
 
-        for row in settings.PROTOCOLS_CSV:
-            if not "id" in row:
-                continue
+        try:
+            for row in settings.PROTOCOLS_CSV:
+                if not "id" in row:
+                    continue
 
-            protocol = Protocol.get(session, row["id"])
+                protocol = Protocol.get(session, row["id"])
 
-            # Given that our datasource is the spreadsheet, the protocol could not be present in the DB yet
-            if not protocol:
-                continue
+                # Given that our datasource is the spreadsheet, the protocol could not be present in the DB yet
+                if not protocol:
+                    continue
 
-            protocol_coverages = ProtocolCoverage.get_protocol_coverages(session, protocol.id)
+                protocol_coverages = ProtocolCoverage.get_protocol_coverages(session, protocol.id)
 
-            if not protocol_coverages:
-                continue
+                if not protocol_coverages:
+                    continue
 
-            protocol_coverage = protocol_coverages[0]
+                protocol_coverage = protocol_coverages[0]
 
-            # fetch protocol's TVL from DefiLlama
-            response = requests.get("https://api.llama.fi/protocol/" + row["defi_llama_slug"])
-            data = response.json()
-            tvl_historical_data = data["chainTvls"]["Ethereum"]["tvl"]
+                # fetch protocol's TVL from DefiLlama
+                response = requests.get("https://api.llama.fi/protocol/" + row["defi_llama_slug"])
+                data = response.json()
+                tvl_historical_data = data["chainTvls"]["Ethereum"]["tvl"]
 
-            for tvl_data_point in reversed(tvl_historical_data):
-                if tvl_data_point["date"] < int(timestamp):
-                    # if protocol's TVL < coverage_amount => TVC = TVL, otherwise TVC = coverage_amount
-                    tvc = min(tvl_data_point["totalLiquidityUSD"] * 1000000, protocol_coverage.coverage_amount)
-                    accumulated_tvc_for_block += int(tvc)
-                    break
+                for tvl_data_point in reversed(tvl_historical_data):
+                    if tvl_data_point["date"] < int(timestamp):
+                        # if protocol's TVL < coverage_amount => TVC = TVL, otherwise TVC = coverage_amount
+                        tvc = min(tvl_data_point["totalLiquidityUSD"] * 1000000, protocol_coverage.coverage_amount)
+                        accumulated_tvc_for_block += int(tvc)
+                        break
 
-        StatsTVC.insert(session, block, datetime.fromtimestamp(timestamp), accumulated_tvc_for_block)
+            StatsTVC.insert(session, block, datetime.fromtimestamp(timestamp), accumulated_tvc_for_block)
+        except Exception as e:
+            logging.exception("Encountered exception %s" % e)
 
     def reset_apy_calc(self, session, indx, block):
         # Do this call to get current `indx.balance_factor` value
