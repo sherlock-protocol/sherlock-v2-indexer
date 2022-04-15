@@ -52,7 +52,7 @@ class Indexer:
         }
         self.intervals = {
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
-            self.calc_tvc: 5,
+            self.calc_tvc: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.calc_factors: 1,
             self.reset_apy_calc: 268
         }
