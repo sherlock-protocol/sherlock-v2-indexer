@@ -20,6 +20,6 @@ __all__ = [
     Protocol,
     ProtocolPremium,
     StatsTVL,
-    StatsTVC
-    ProtocolCoverage,
+    StatsTVC,
+    ProtocolCoverage
 ]

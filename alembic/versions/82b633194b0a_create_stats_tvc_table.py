@@ -20,7 +20,7 @@ depends_on = None
 
 def upgrade():
     op.create_table(
-        "stats_tvl",
+        "stats_tvc",
         sa.Column("id", sa.BIGINT, primary_key=True),
         sa.Column("timestamp",  postgresql.TIMESTAMP(), nullable=False),
         sa.Column("block", sa.Integer(), nullable=False),

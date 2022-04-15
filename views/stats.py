@@ -28,7 +28,7 @@ def stats_tvc():
         offset = args.get("offset", default=0)
         limit = args.get("limit", default=365)
 
-        stats = StatsTVL.find_all(s, offset, limit)
+        stats = StatsTVC.find_all(s, offset, limit)
 
     # Transform rows in list of dictionaries
     stats = [x.to_dict() for x in stats]

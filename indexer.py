@@ -1,8 +1,10 @@
 import logging
 import threading
 import time
+import requests
 from datetime import datetime, timedelta
 from decimal import Decimal, getcontext
+import csv
 
 from sqlalchemy.exc import IntegrityError
 from web3.constants import ADDRESS_ZERO
@@ -24,7 +26,9 @@ from utils import get_event_logs_in_range, time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
-logging.basicConfig(filename="output.log", level=logging.INFO)
+
+logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(filename="output.log", level=logging.INFO)
 
 
 class Indexer:
@@ -46,7 +50,11 @@ class Indexer:
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemoved: self.ProtocolRemoved.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
         }
-        self.intervals = {self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL, self.calc_factors: 1}
+        self.intervals = {
+            self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
+            self.calc_tvc: 5,
+            self.calc_factors: 1
+        }
 
     # Also get called after listening to events with `end_block`
     def calc_factors(self, session, indx, block):
@@ -79,6 +87,45 @@ class Indexer:
         tvl = settings.CORE_WSS.functions.totalTokenBalanceStakers().call(block_identifier=block)
 
         StatsTVL.insert(session, block, timestamp, tvl)
+
+    def calc_tvc(self, session, indx, block):
+        # read list of protocols from local csv file
+        protocols = {}
+        with open("./meta/protocols.csv", newline="") as csv_file:
+            csv_reader = csv.DictReader(csv_file)
+            for row in csv_reader:
+                if "id" in row:
+                    protocols[row["id"]] = row["defi_llama_slug"]
+
+        timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+        accumulated_tvc_for_block = 0
+        for protocol_bytes, defi_llama_slug in protocols.items():
+            protocol = Protocol.get(session, protocol_bytes)
+
+            # Given that our datasource is the spreadsheet, the protocol could not be present in the DB yet
+            if not protocol:
+                continue
+
+            protocol_coverages = ProtocolCoverage.get_protocol_coverages(session, protocol.id)
+
+            if not protocol_coverages:
+                continue
+
+            protocol_coverage = protocol_coverages[0]
+
+            # fetch protocol's TVL from DefiLlama
+            response = requests.get("https://api.llama.fi/protocol/" + defi_llama_slug)
+            data = response.json()
+            tvl_historical_data = data["chainTvls"]["Ethereum"]["tvl"]
+
+            for tvl_data_point in reversed(tvl_historical_data):
+                if tvl_data_point["date"] < int(timestamp):
+                    # if protocol's TVL < coverage_amount => TVC = TVL, otherwise TVC = coverage_amount
+                    tvc = min(tvl_data_point["totalLiquidityUSD"] * 1000000, protocol_coverage.coverage_amount)
+                    accumulated_tvc_for_block += int(tvc)
+                    break
+
+        StatsTVC.insert(session, block, datetime.fromtimestamp(timestamp), accumulated_tvc_for_block)
 
     class Transfer:
         def new(self, session, indx, block, args):
