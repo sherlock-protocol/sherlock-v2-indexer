@@ -52,7 +52,7 @@ class Indexer:
         }
         self.intervals = {
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
-            self.calc_tvc: settings.INDEXER_STATS_BLOCKS_PER_CALL,
+            self.calc_tvc: 5,
             self.calc_factors: 1,
             # 268 blocks is roughly every hour on current Ethereum mainnet
             self.reset_apy_calc: 268
@@ -93,38 +93,35 @@ class Indexer:
     def calc_tvc(self, session, indx, block):
         timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
         accumulated_tvc_for_block = 0
-        # read list of protocols from local csv file
-        protocols = {}
-        with open("./meta/protocols.csv", newline="") as csv_file:
-            csv_reader = csv.DictReader(csv_file)
-            for row in csv_reader:
-                if not "id" in row:
-                    continue
 
-                protocol = Protocol.get(session, row["id"])
+        for row in settings.PROTOCOLS_CSV:
+            if not "id" in row:
+                continue
 
-                # Given that our datasource is the spreadsheet, the protocol could not be present in the DB yet
-                if not protocol:
-                    continue
+            protocol = Protocol.get(session, row["id"])
 
-                protocol_coverages = ProtocolCoverage.get_protocol_coverages(session, protocol.id)
+            # Given that our datasource is the spreadsheet, the protocol could not be present in the DB yet
+            if not protocol:
+                continue
 
-                if not protocol_coverages:
-                    continue
+            protocol_coverages = ProtocolCoverage.get_protocol_coverages(session, protocol.id)
 
-                protocol_coverage = protocol_coverages[0]
+            if not protocol_coverages:
+                continue
 
-                # fetch protocol's TVL from DefiLlama
-                response = requests.get("https://api.llama.fi/protocol/" + row["defi_llama_slug"])
-                data = response.json()
-                tvl_historical_data = data["chainTvls"]["Ethereum"]["tvl"]
+            protocol_coverage = protocol_coverages[0]
 
-                for tvl_data_point in reversed(tvl_historical_data):
-                    if tvl_data_point["date"] < int(timestamp):
-                        # if protocol's TVL < coverage_amount => TVC = TVL, otherwise TVC = coverage_amount
-                        tvc = min(tvl_data_point["totalLiquidityUSD"] * 1000000, protocol_coverage.coverage_amount)
-                        accumulated_tvc_for_block += int(tvc)
-                        break
+            # fetch protocol's TVL from DefiLlama
+            response = requests.get("https://api.llama.fi/protocol/" + row["defi_llama_slug"])
+            data = response.json()
+            tvl_historical_data = data["chainTvls"]["Ethereum"]["tvl"]
+
+            for tvl_data_point in reversed(tvl_historical_data):
+                if tvl_data_point["date"] < int(timestamp):
+                    # if protocol's TVL < coverage_amount => TVC = TVL, otherwise TVC = coverage_amount
+                    tvc = min(tvl_data_point["totalLiquidityUSD"] * 1000000, protocol_coverage.coverage_amount)
+                    accumulated_tvc_for_block += int(tvc)
+                    break
 
         StatsTVC.insert(session, block, datetime.fromtimestamp(timestamp), accumulated_tvc_for_block)
 
