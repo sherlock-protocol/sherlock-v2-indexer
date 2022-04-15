@@ -53,7 +53,8 @@ class Indexer:
         self.intervals = {
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.calc_tvc: 5,
-            self.calc_factors: 1
+            self.calc_factors: 1,
+            self.reset_apy_calc: 268
         }
 
     # Also get called after listening to events with `end_block`
@@ -126,6 +127,16 @@ class Indexer:
                     break
 
         StatsTVC.insert(session, block, datetime.fromtimestamp(timestamp), accumulated_tvc_for_block)
+
+    def reset_apy_calc(self, session, indx, block):
+        # Do this call to get current `indx.balance_factor` value
+        self.calc_factors(session, indx, block)
+
+        # Update all staking positions with current factor
+        StakingPositionsMeta.update(session, block, indx.balance_factor)
+
+        # Reset factor
+        indx.balance_factor = Decimal(1)
 
     class Transfer:
         def new(self, session, indx, block, args):
