@@ -1,5 +1,4 @@
 import logging
-from msilib.schema import Error
 import threading
 import time
 import requests
@@ -51,7 +50,7 @@ class Indexer:
         }
         self.intervals = {
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
-            self.calc_tvc: 5,
+            self.calc_tvc: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.calc_factors: 1,
             # 268 blocks is roughly every hour on current Ethereum mainnet
             self.reset_apy_calc: 268
@@ -125,7 +124,7 @@ class Indexer:
 
             StatsTVC.insert(session, block, datetime.fromtimestamp(timestamp), accumulated_tvc_for_block)
         except Exception as e:
-            logging.exception("Encountered exception %s" % e)
+            logging.exception("TVC calc encountered exception %s" % e)
 
     def reset_apy_calc(self, session, indx, block):
         # Do this call to get current `indx.balance_factor` value
