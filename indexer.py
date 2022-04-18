@@ -130,11 +130,12 @@ class Indexer:
         # Do this call to get current `indx.balance_factor` value
         self.calc_factors(session, indx, block)
 
-        # Update all staking positions with current factor
-        StakingPositionsMeta.update(session, block, indx.balance_factor)
+        if indx.balance_factor != Decimal(1):
+            # Update all staking positions with current factor
+            StakingPositionsMeta.update(session, block, indx.balance_factor)
 
-        # Reset factor
-        indx.balance_factor = Decimal(1)
+            # Reset factor
+            indx.balance_factor = Decimal(1)
 
     class Transfer:
         def new(self, session, indx, block, args):
