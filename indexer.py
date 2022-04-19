@@ -51,7 +51,6 @@ class Indexer:
         self.intervals = {
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.calc_tvc: settings.INDEXER_STATS_BLOCKS_PER_CALL,
-            self.calc_factors: 1,
             # 268 blocks is roughly every hour on current Ethereum mainnet
             self.reset_apy_calc: 268
         }
@@ -127,8 +126,9 @@ class Indexer:
             logging.exception("TVC calc encountered exception %s" % e)
 
     def reset_apy_calc(self, session, indx, block):
-        # Do this call to get current `indx.balance_factor` value
-        self.calc_factors(session, indx, block)
+        # Compute the APY only if there is a staking position available
+        if StakingPositions.get_for_factor(session):
+            self.calc_factors(session, indx, block)
 
         # Update all staking positions with current factor
         StakingPositionsMeta.update(session, block, indx.balance_factor)
@@ -151,11 +151,7 @@ class Indexer:
                 return
 
             # Update all database entries to be up to date with block
-            self.calc_factors(session, indx, block)
-
-            if indx.balance_factor != Decimal(1):
-                StakingPositionsMeta.update(session, block, indx.balance_factor)
-                indx.balance_factor = Decimal(1)
+            self.reset_apy_calc(session, indx, block)
 
             # Insert will retrieve active information (usdc, sher, lockup)
             StakingPositions.insert(
