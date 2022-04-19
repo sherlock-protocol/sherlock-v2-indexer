@@ -126,12 +126,9 @@ class Indexer:
             logging.exception("TVC calc encountered exception %s" % e)
 
     def reset_apy_calc(self, session, indx, block):
-        # SKip computing the APY if there are no staking positions available
-        if not StakingPositions.get_for_factor(session):
-            return
-
-        # Do this call to get current `indx.balance_factor` value
-        self.calc_factors(session, indx, block)
+        # Compute the APY only if there is a staking position available
+        if StakingPositions.get_for_factor(session):
+            self.calc_factors(session, indx, block)
 
         # Update all staking positions with current factor
         StakingPositionsMeta.update(session, block, indx.balance_factor)
