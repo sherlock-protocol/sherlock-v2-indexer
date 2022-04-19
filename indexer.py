@@ -51,7 +51,6 @@ class Indexer:
         self.intervals = {
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.calc_tvc: settings.INDEXER_STATS_BLOCKS_PER_CALL,
-            self.calc_factors: 1,
             # 268 blocks is roughly every hour on current Ethereum mainnet
             self.reset_apy_calc: 268
         }
