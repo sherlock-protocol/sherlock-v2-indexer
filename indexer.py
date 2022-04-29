@@ -224,6 +224,10 @@ class Indexer:
             logging.debug("[+] Restaked")
             token_id = args["tokenID"]
 
+            # Update all database entries to be up to date with block
+            self.reset_apy_calc(session, indx, block)
+
+            # Restake position
             StakingPositions.restake(session, block, token_id)
 
     class ProtocolUpdated:
