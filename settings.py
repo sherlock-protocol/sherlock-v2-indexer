@@ -1,10 +1,12 @@
 import json
 import os
+import csv
 
 from decouple import config
 from sqlalchemy import create_engine
 from web3 import Web3, WebsocketProvider
 from web3.middleware import geth_poa_middleware
+
 
 API_HOST = config("API_HOST", default="127.0.0.1")
 API_PORT = config("API_PORT", default=5000, cast=int)
@@ -63,3 +65,7 @@ INDEXER_SLEEP_BETWEEN_CALL = config("INDEXER_SLEEP_BETWEEN_CALL", default=5.0, c
 
 # Will be used to flag the last position ID that get's 15% apy
 LAST_POSITION_ID_FOR_15PERC_APY = config("LAST_POSITION_ID_FOR_15PERC_APY", cast=int, default=10000000000000)
+
+# Protocols (from local csv file, kept in memory)
+with open("./meta/protocols.csv", newline="") as csv_file:
+    PROTOCOLS_CSV = list(csv.DictReader(csv_file))

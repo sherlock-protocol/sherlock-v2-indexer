@@ -4,6 +4,7 @@ import time
 from datetime import datetime, timedelta
 from decimal import Decimal, getcontext
 
+import requests
 from sqlalchemy.exc import IntegrityError
 from web3.constants import ADDRESS_ZERO
 
@@ -17,12 +18,14 @@ from models import (
     Session,
     StakingPositions,
     StakingPositionsMeta,
+    StatsTVC,
     StatsTVL,
 )
 from utils import get_event_logs_in_range, time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
+
 logging.basicConfig(filename="output.log", level=logging.INFO)
 
 
@@ -45,11 +48,10 @@ class Indexer:
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemoved: self.ProtocolRemoved.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
         }
-
-        # 268 blocks is roughly every hour on current Ethereum mainnet
         self.intervals = {
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
-            self.calc_factors: 1,
+            self.calc_tvc: settings.INDEXER_STATS_BLOCKS_PER_CALL,
+            # 268 blocks is roughly every hour on current Ethereum mainnet
             self.reset_apy_calc: 268,
         }
 
@@ -85,9 +87,48 @@ class Indexer:
 
         StatsTVL.insert(session, block, timestamp, tvl)
 
+    def calc_tvc(self, session, indx, block):
+        timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+        accumulated_tvc_for_block = 0
+
+        try:
+            for row in settings.PROTOCOLS_CSV:
+                if "id" not in row:
+                    continue
+
+                protocol = Protocol.get(session, row["id"])
+
+                # Given that our datasource is the spreadsheet, the protocol could not be present in the DB yet
+                if not protocol:
+                    continue
+
+                protocol_coverages = ProtocolCoverage.get_protocol_coverages(session, protocol.id)
+
+                if not protocol_coverages:
+                    continue
+
+                protocol_coverage = protocol_coverages[0]
+
+                # fetch protocol's TVL from DefiLlama
+                response = requests.get("https://api.llama.fi/protocol/" + row["defi_llama_slug"])
+                data = response.json()
+                tvl_historical_data = data["chainTvls"]["Ethereum"]["tvl"]
+
+                for tvl_data_point in reversed(tvl_historical_data):
+                    if tvl_data_point["date"] < int(timestamp):
+                        # if protocol's TVL < coverage_amount => TVC = TVL, otherwise TVC = coverage_amount
+                        tvc = min(tvl_data_point["totalLiquidityUSD"] * 1000000, protocol_coverage.coverage_amount)
+                        accumulated_tvc_for_block += int(tvc)
+                        break
+
+            StatsTVC.insert(session, block, datetime.fromtimestamp(timestamp), accumulated_tvc_for_block)
+        except Exception as e:
+            logging.exception("TVC calc encountered exception %s" % e)
+
     def reset_apy_calc(self, session, indx, block):
-        # Do this call to get current `indx.balance_factor` value
-        self.calc_factors(session, indx, block)
+        # Compute the APY only if there is a staking position available
+        if StakingPositions.get_for_factor(session):
+            self.calc_factors(session, indx, block)
 
         # Update all staking positions with current factor
         StakingPositionsMeta.update(session, block, indx.balance_factor)
@@ -110,11 +151,7 @@ class Indexer:
                 return
 
             # Update all database entries to be up to date with block
-            self.calc_factors(session, indx, block)
-
-            if indx.balance_factor != Decimal(1):
-                StakingPositionsMeta.update(session, block, indx.balance_factor)
-                indx.balance_factor = Decimal(1)
+            self.reset_apy_calc(session, indx, block)
 
             # Insert will retrieve active information (usdc, sher, lockup)
             StakingPositions.insert(
