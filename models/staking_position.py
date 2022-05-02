@@ -53,15 +53,29 @@ class StakingPositions(Base):
 
     @staticmethod
     def delete(session, id):
-        session.query(StakingPositions).filter_by(id=id).one().delete()
+        session.query(StakingPositions).filter_by(id=id).delete()
 
     @staticmethod
     def get(session, owner):
         return session.query(StakingPositions).filter_by(owner=owner).order_by(desc(StakingPositions.lockup_end)).all()
 
     @staticmethod
-    def restake(session, id):
-        session.query(StakingPositions).filter_by(id=id).update({"restake_count": StakingPositions.restake_count + 1})
+    def restake(session, block, id):
+        position = session.query(StakingPositions).filter_by(id=id).first()
+
+        if not position:
+            return
+
+        # Update staking position with latest blockchain data
+        lockup_end = settings.CORE_WSS.functions.lockupEnd(id).call(block_identifier=block)
+        usdc = settings.CORE_WSS.functions.tokenBalanceOf(id).call(block_identifier=block)
+        sher = settings.CORE_WSS.functions.sherRewards(id).call(block_identifier=block)
+
+        position.lockup_end = datetime.fromtimestamp(lockup_end)
+        position.usdc = usdc
+        position.sher = sher
+
+        position.restake_count += 1
 
     def get_balance_data(self, block):
         usdc = settings.CORE_WSS.functions.tokenBalanceOf(self.id).call(block_identifier=block)

@@ -1,10 +1,10 @@
 import logging
 import threading
 import time
-import requests
 from datetime import datetime, timedelta
 from decimal import Decimal, getcontext
 
+import requests
 from sqlalchemy.exc import IntegrityError
 from web3.constants import ADDRESS_ZERO
 
@@ -18,8 +18,8 @@ from models import (
     Session,
     StakingPositions,
     StakingPositionsMeta,
+    StatsTVC,
     StatsTVL,
-    StatsTVC
 )
 from utils import get_event_logs_in_range, time_delta_apy
 
@@ -52,7 +52,7 @@ class Indexer:
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.calc_tvc: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             # 268 blocks is roughly every hour on current Ethereum mainnet
-            self.reset_apy_calc: 268
+            self.reset_apy_calc: 268,
         }
 
     # Also get called after listening to events with `end_block`
@@ -93,7 +93,7 @@ class Indexer:
 
         try:
             for row in settings.PROTOCOLS_CSV:
-                if not "id" in row:
+                if "id" not in row:
                     continue
 
                 protocol = Protocol.get(session, row["id"])
@@ -224,7 +224,11 @@ class Indexer:
             logging.debug("[+] Restaked")
             token_id = args["tokenID"]
 
-            StakingPositions.restake(session, token_id)
+            # Update all database entries to be up to date with block
+            self.reset_apy_calc(session, indx, block)
+
+            # Restake position
+            StakingPositions.restake(session, block, token_id)
 
     class ProtocolUpdated:
         def new(self, session, indx, block, args):
