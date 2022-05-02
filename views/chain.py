@@ -33,5 +33,6 @@ def wait_for_block():
                 return {"ok": True}
 
             time.sleep(1)
+            try_count += 1
 
         return {"ok": False, "error": "Exceeded maximum waiting time."}
