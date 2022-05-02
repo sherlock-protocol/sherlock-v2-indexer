@@ -17,9 +17,12 @@ def wait_for_block():
         block = request.args.get("block")
 
         if not block:
-            return {"ok": False, "error": "Block param is mandatory."}
+            return {"ok": False, "error": "Block param is mandatory."}, 400
 
-        block = int(block)
+        try:
+            block = int(block)
+        except Exception:
+            return {"ok": False, "error": "Block param must be an integer."}, 400
 
         # Maximum number of seconds to wait for the block to get indexer.
         # Nginx's timeout should be changed according to this setting as well.
@@ -35,4 +38,4 @@ def wait_for_block():
             time.sleep(1)
             try_count += 1
 
-        return {"ok": False, "error": "Exceeded maximum waiting time."}
+        return {"ok": False, "error": "Exceeded maximum waiting time."}, 500
