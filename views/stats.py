@@ -1,6 +1,7 @@
-from flask_app import app
 from flask import request
-from models import Session, StatsTVL, StatsTVC
+
+from flask_app import app
+from models import Session, StatsAPY, StatsTVC, StatsTVL
 
 
 @app.route("/stats_tvl")
@@ -29,6 +30,24 @@ def stats_tvc():
         limit = args.get("limit", default=365)
 
         stats = StatsTVC.find_all(s, offset, limit)
+
+    # Transform rows in list of dictionaries
+    stats = [x.to_dict() for x in stats]
+
+    return {
+        "ok": True,
+        "data": stats,
+    }
+
+
+@app.route("/stats/apy")
+def stats_apy():
+    args = request.args
+    with Session() as s:
+        offset = args.get("offset", default=0)
+        limit = args.get("limit", default=365)
+
+        stats = StatsAPY.find_all(s, offset, limit)
 
     # Transform rows in list of dictionaries
     stats = [x.to_dict() for x in stats]
