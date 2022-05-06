@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import Column, Integer, Text
-from sqlalchemy.dialects.postgresql import TIMESTAMP
+from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
 
 from models.base import Base
 
@@ -13,6 +13,7 @@ class Protocol(Base):
     bytes_identifier = Column(Text, nullable=False, unique=True)
     agent = Column(Text, nullable=False)
     coverage_ended_at = Column(TIMESTAMP)
+    tvl = Column(NUMERIC(78), nullable=True)
 
     @staticmethod
     def parse_bytes_id(bytes):
