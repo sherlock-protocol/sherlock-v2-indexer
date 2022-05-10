@@ -5,6 +5,7 @@ venv
 *.pyc
 
 output.log*
+debug_output.log*
 dbdata
 .idea
 .pytest_cache

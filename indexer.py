@@ -58,26 +58,26 @@ class Indexer:
 
     # Also get called after listening to events with `end_block`
     def calc_factors(self, session, indx, block):
-        logger.debug("Computing APY and balance factor")
+        logger.info("Computing APY and balance factor")
         meta = StakingPositionsMeta.get(session)
 
         if meta.usdc_last_updated == datetime.min:
-            logger.debug("Meta not yet initialised. Returning...")
+            logger.info("Meta not yet initialised. Returning...")
             return
 
         timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
         position_timedelta = timestamp - meta.usdc_last_updated.timestamp()
         if position_timedelta == 0:
-            logger.debug("No time has passed since last computation. Returning...")
+            logger.info("No time has passed since last computation. Returning...")
             return
 
         position = StakingPositions.get_for_factor(session)
         usdc, factor = position.get_balance_data(block)
-        logger.debug("Computed a balance factor of %s", factor)
+        logger.info("Computed a balance factor of %s", factor)
 
         # TODO make compounding?
         apy = time_delta_apy(position.usdc, usdc, position_timedelta)
-        logger.debug("Computed an APY of %s", apy)
+        logger.info("Computed an APY of %s", apy)
 
         indx.balance_factor = factor
         # If no payout has occured since the last loop
@@ -247,10 +247,10 @@ class Indexer:
         # get last block indexed from database
         with Session() as s:
             start_block = s.query(IndexerState).first().last_block
-            logger.debug("Starting indexer loop from block %s", start_block)
+            logger.info("Starting indexer loop from block %s", start_block)
 
         t = threading.currentThread()
-        logger.debug("Thread started")
+        logger.info("Thread started")
 
         while getattr(t, "do_run", True):
             try:
@@ -264,7 +264,7 @@ class Indexer:
                     end_block = current_block
 
                 if start_block > end_block:
-                    logger.debug(
+                    logger.info(
                         "Block %s not yet mined. Last block %s. Sleeping for %ss.",
                         start_block,
                         current_block,
@@ -291,12 +291,12 @@ class Indexer:
                 time.sleep(settings.INDEXER_SLEEP_BETWEEN_CALL)
 
     def index_intervals(self, session, indx, block):
-        logger.debug("Running interval indexing functions")
+        logger.info("Running interval indexing functions")
         for func, interval in self.intervals.items():
             if block % interval >= self.blocks_per_call:
                 continue
 
-            logger.debug("Running interval function  %s", func.__name__)
+            logger.info("Running interval function  %s", func.__name__)
             try:
                 func(session, indx, block)
             except IntegrityError as e:
@@ -314,7 +314,7 @@ class Indexer:
         self.index_events(session, indx, start_block, end_block)
 
         took_seconds = timer() - start
-        logger.debug(
+        logger.info(
             "Took %ss to listen to all events. Listened to %s blocks (range %s-%s)"
             % (took_seconds, (end_block - start_block) + 1, start_block, end_block)
         )
@@ -327,15 +327,15 @@ class Indexer:
             )
 
     def index_events(self, session, indx, start_block, end_block):
-        logger.debug("Indexing events in block range %s-%s", start_block, end_block)
+        logger.info("Indexing events in block range %s-%s", start_block, end_block)
 
         # Commit on every insert so indexer doesn't halt on single failure
         for event, func in self.events.items():
             entries = get_event_logs_in_range(event, start_block, end_block)
-            logger.debug("Found %s %s events.", len(entries), event.__name__)
+            logger.info("Found %s %s events.", len(entries), event.__name__)
 
             for entry in entries:
-                logger.debug("Processing %s event - Args: %s", entry["event"], entry["args"].__dict__)
+                logger.info("Processing %s event - Args: %s", entry["event"], entry["args"].__dict__)
 
                 try:
                     func(self, session, indx, entry["blockNumber"], entry["args"])
@@ -350,7 +350,7 @@ class Indexer:
                     session.rollback()
                     continue
 
-                logger.debug("Processed %s event from smart contract", entry["event"])
+                logger.info("Processed %s event from smart contract", entry["event"])
 
 
 if __name__ == "__main__":

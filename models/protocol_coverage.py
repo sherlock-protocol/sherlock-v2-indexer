@@ -49,7 +49,7 @@ class ProtocolCoverage(Base):
         existing_coverage_amounts = ProtocolCoverage.get_protocol_coverages(session, protocol_id)
 
         if new_coverage_amount == 0:
-            logger.debug("Protocol %s coverage has been removed.", protocol_id)
+            logger.info("Protocol %s coverage has been removed.", protocol_id)
             # Protocol has been removed, but it still has
             # a window of 7 more days to submit a claim.
 

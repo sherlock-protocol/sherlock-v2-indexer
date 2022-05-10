@@ -150,10 +150,10 @@ def run_shell_command(command: str) -> str:
     Returns:
         str: Command output
     """
-    logger.debug("[ ] Executing command: " + command)
+    logger.info("[ ] Executing command: " + command)
     with os.popen(command) as stream:
         output = stream.read()
-        logger.debug(f"[ ] Output: \r\n{output}")
+        logger.info(f"[ ] Output: \r\n{output}")
 
         return output
 
