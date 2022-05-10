@@ -3,6 +3,7 @@ import threading
 import time
 from datetime import datetime, timedelta
 from decimal import Decimal, getcontext
+from timeit import default_timer as timer
 
 import requests
 from sqlalchemy.exc import IntegrityError
@@ -303,20 +304,20 @@ class Indexer:
                 continue
 
     def index_events_time(self, session, indx, start_block, end_block):
-        start = datetime.utcnow()
+        start = timer()
 
         self.index_events(session, indx, start_block, end_block)
 
-        took_seconds = (datetime.utcnow() - start).microseconds / 1000
+        took_seconds = timer() - start
         logger.debug(
-            "Took %s ms to listen to all events. listened to %s blocks (range %s-%s)"
+            "Took %ss to listen to all events. Listened to %s blocks (range %s-%s)"
             % (took_seconds, (end_block - start_block) + 1, start_block, end_block)
         )
 
         if took_seconds > (end_block - start_block) + 1 * 1000:
             # Can not keep up with the blocks that are created
             logger.warning(
-                "Can not keep up with the blocks that are created took %s microseconds for %s blocks"
+                "Can not keep up with the blocks that are created. Took %s seconds for %s blocks"
                 % (took_seconds, (end_block - start_block) + 1)
             )
 
