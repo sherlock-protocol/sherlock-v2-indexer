@@ -58,21 +58,26 @@ class Indexer:
 
     # Also get called after listening to events with `end_block`
     def calc_factors(self, session, indx, block):
+        logger.debug("Computing APY and balance factor")
         meta = StakingPositionsMeta.get(session)
 
         if meta.usdc_last_updated == datetime.min:
+            logger.debug("Meta not yet initialised. Returning...")
             return
 
         timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
         position_timedelta = timestamp - meta.usdc_last_updated.timestamp()
         if position_timedelta == 0:
+            logger.debug("No time has passed since last computation. Returning...")
             return
 
         position = StakingPositions.get_for_factor(session)
         usdc, factor = position.get_balance_data(block)
+        logger.debug("Computed a balance factor of %s", factor)
 
         # TODO make compounding?
         apy = time_delta_apy(position.usdc, usdc, position_timedelta)
+        logger.debug("Computed an APY of %s", apy)
 
         indx.balance_factor = factor
         # If no payout has occured since the last loop
