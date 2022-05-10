@@ -85,22 +85,22 @@ verbose_formatter = Formatter(
     )
 )
 
-# Setup file logging using file rotation at midnight
+
+# Redirect INFO+ logs to console and output.log
 file_handler = TimedRotatingFileHandler(filename="output.log", when="midnight", utc=True)
-file_handler.setLevel("DEBUG")
+file_handler.setLevel("INFO")
 file_handler.setFormatter(verbose_formatter)
 
-# Setup console logging
 console_handler = StreamHandler()
-console_handler.setLevel("DEBUG")
+console_handler.setLevel("INFO")
 console_handler.setFormatter(verbose_formatter)
+
+# Redirect DEBUG+ logs to separate file
+debug_file_handler = TimedRotatingFileHandler(filename="debug_output.log", when="midnight", utc=True)
+debug_file_handler.setLevel("DEBUG")
+debug_file_handler.setFormatter(verbose_formatter)
 
 logger.handlers = []
 logger.addHandler(console_handler)
 logger.addHandler(file_handler)
-
-# Disable websockets protocol loggers
-getLogger("websockets.protocol").setLevel("INFO")
-
-# Disable web3.py loggers
-getLogger("web3").setLevel("INFO")
+logger.addHandler(debug_file_handler)
