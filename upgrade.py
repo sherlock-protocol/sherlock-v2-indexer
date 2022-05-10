@@ -13,7 +13,7 @@ import settings
 from alembic import command
 from alembic.config import Config
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def parse_args():
@@ -44,7 +44,7 @@ def create_new_database(prefix: str, connection: Connection) -> str:
     Returns:
         str: The name of the newly created database
     """
-    logging.info("[+] Creating new database...")
+    logger.info("[+] Creating new database...")
 
     # Generate the name by apppending current timestamp
     new_db_name = f"{prefix}_{str(int(datetime.now().timestamp()))}"
@@ -55,7 +55,7 @@ def create_new_database(prefix: str, connection: Connection) -> str:
     # Create the database
     connection.execute("create database " + new_db_name)
 
-    logging.info("[ ] Created database " + new_db_name)
+    logger.info("[ ] Created database " + new_db_name)
 
     # Update env variable for the rest of this script's execution
     os.environ["DB_NAME"] = new_db_name
@@ -69,7 +69,7 @@ def update_env(db_name: str):
     Args:
         db_name (str): New database name
     """
-    logging.info("[+] Updating .env...")
+    logger.info("[+] Updating .env...")
 
     with open("./.env") as f:
         current_env = f.read()
@@ -84,7 +84,7 @@ def update_env(db_name: str):
 def run_db_migrations():
     """Get DB structure up to date by running
     available database migration scripts."""
-    logging.info("[+] Running DB migrations...")
+    logger.info("[+] Running DB migrations...")
 
     # Force reimporting settings module to use the new env variables
     importlib.reload(settings)
@@ -97,7 +97,7 @@ def run_db_migrations():
 
 def initialize_database(block_number):
     """Initialize the new database"""
-    logging.info(f"[+] Initializing the DB to block {block_number}...")
+    logger.info(f"[+] Initializing the DB to block {block_number}...")
 
     import database
 
@@ -113,7 +113,7 @@ def reindex(connection: Connection):
     from indexer import Indexer
     from models import IndexerState, Session
 
-    logging.info("[+] Indexing until up to date with live indexer")
+    logger.info("[+] Indexing until up to date with live indexer")
 
     # We instantiate an indexer that processes chunks of 2k blocks
     indexer = Indexer(blocks_per_call=2000)
@@ -128,7 +128,7 @@ def reindex(connection: Connection):
                 live_block_number = live_db.query(IndexerState).first().last_block
                 current_block_number = new_db.query(IndexerState).first().last_block
 
-                logging.info(
+                logger.info(
                     f"[+] - Last indexed block: {current_block_number}, Live indexed block: {live_block_number}"
                 )
 
@@ -150,10 +150,10 @@ def run_shell_command(command: str) -> str:
     Returns:
         str: Command output
     """
-    logging.debug("[ ] Executing command: " + command)
+    logger.debug("[ ] Executing command: " + command)
     with os.popen(command) as stream:
         output = stream.read()
-        logging.debug(f"[ ] Output: \r\n{output}")
+        logger.debug(f"[ ] Output: \r\n{output}")
 
         return output
 
@@ -190,7 +190,7 @@ def stop_indexer_process(pid: str):
     Args:
         pid (str): Process PID
     """
-    logging.info(f"[+] Stopping process {pid}...")
+    logger.info(f"[+] Stopping process {pid}...")
 
     command = f"kill -s TERM {pid}"
     run_shell_command(command)
@@ -209,7 +209,7 @@ def start_new_indexer(screen_name: str):
     Raises:
         Exception: Error when starting a new indexer process
     """
-    logging.info("[+] Starting new indexer process...")
+    logger.info("[+] Starting new indexer process...")
 
     command = f"screen -S {screen_name} -d -m ./venv/bin/python indexer.py"
     run_shell_command(command)
@@ -221,7 +221,7 @@ def start_new_indexer(screen_name: str):
     if not pid:
         raise Exception("Failed starting a new indexer process!")
 
-    logging.info(f"[+] New indexer process started {pid}")
+    logger.info(f"[+] New indexer process started {pid}")
 
 
 def restart_service(service: str):
@@ -231,7 +231,7 @@ def restart_service(service: str):
         service (str): Name of service running the API
     """
 
-    logging.info(f"[+] Restarting API service {service}...")
+    logger.info(f"[+] Restarting API service {service}...")
 
     command = f"sudo systemctl restart {service}"
     run_shell_command(command)

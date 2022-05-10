@@ -1,9 +1,12 @@
+import logging
 from datetime import datetime, timedelta
 
 from sqlalchemy import Column, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
 
 from models.base import Base
+
+logger = logging.getLogger(__name__)
 
 
 class ProtocolCoverage(Base):
@@ -28,6 +31,7 @@ class ProtocolCoverage(Base):
 
     @staticmethod
     def insert(session, protocol_id, coverage_amount, timestamp):
+        logger.info("Creating protocol coverage in amount of %s for protocol #%s", coverage_amount, protocol_id)
         coverage_amount_set_at = datetime.fromtimestamp(timestamp)
 
         protocol_coverage = ProtocolCoverage()
@@ -45,6 +49,7 @@ class ProtocolCoverage(Base):
         existing_coverage_amounts = ProtocolCoverage.get_protocol_coverages(session, protocol_id)
 
         if new_coverage_amount == 0:
+            logger.debug("Protocol %s coverage has been removed.", protocol_id)
             # Protocol has been removed, but it still has
             # a window of 7 more days to submit a claim.
 

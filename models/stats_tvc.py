@@ -1,10 +1,13 @@
 import json
+import logging
 from datetime import datetime
 
 from sqlalchemy import Column, Integer
-from sqlalchemy.dialects.postgresql import TIMESTAMP, NUMERIC, BIGINT
+from sqlalchemy.dialects.postgresql import BIGINT, NUMERIC, TIMESTAMP
 
 from models.base import Base
+
+logger = logging.getLogger(__name__)
 
 
 class StatsTVC(Base):
@@ -17,6 +20,7 @@ class StatsTVC(Base):
 
     @staticmethod
     def insert(session, block, timestamp, value):
+        logger.info("Inserting TVC value of %s at %s", value, timestamp)
         tvc = StatsTVC()
         tvc.timestamp = timestamp
         tvc.value = value
@@ -26,6 +30,7 @@ class StatsTVC(Base):
 
     @staticmethod
     def insert_from_delta(session, block, timestamp, delta):
+        logger.info("Inserting TVC delta of %s at %s", delta, timestamp)
         last = session.query(StatsTVC).order_by(StatsTVC.timestamp.desc()).first()
 
         tvc = StatsTVC()

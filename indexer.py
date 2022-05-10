@@ -26,7 +26,7 @@ from utils import get_event_logs_in_range, time_delta_apy
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
 
-logging.basicConfig(filename="output.log", level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class Indexer:
@@ -123,7 +123,7 @@ class Indexer:
 
             StatsTVC.insert(session, block, datetime.fromtimestamp(timestamp), accumulated_tvc_for_block)
         except Exception as e:
-            logging.exception("TVC calc encountered exception %s" % e)
+            logger.exception("TVC calc encountered exception %s" % e)
 
     def reset_apy_calc(self, session, indx, block):
         # Compute the APY only if there is a staking position available
@@ -180,8 +180,6 @@ class Indexer:
 
     class ProtocolAdded:
         def new(self, session, indx, block, args):
-            logging.debug("[+] ProtocolAdded")
-
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
 
             protocol = Protocol.get(session, protocol_bytes_id)
@@ -191,7 +189,6 @@ class Indexer:
 
     class ProtocolAgentTransfer:
         def new(self, session, indx, block, args):
-            logging.debug("[+] ProtocolAgentTransfer")
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             new_agent = args["to"]
 
@@ -199,7 +196,6 @@ class Indexer:
 
     class ProtocolPremiumChanged:
         def new(self, session, indx, block, args):
-            logging.debug("[+] ProtocolPremiumChanged")
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             new_premium = args["newPremium"]
 
@@ -213,7 +209,6 @@ class Indexer:
 
     class ProtocolRemoved:
         def new(self, session, indx, block, args):
-            logging.debug("[+] ProtocolRemoved/ProtocolRemovedByArb")
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
@@ -221,7 +216,6 @@ class Indexer:
 
     class Restaked:
         def new(self, session, indx, block, args):
-            logging.debug("[+] Restaked")
             token_id = args["tokenID"]
 
             # Update all database entries to be up to date with block
@@ -232,9 +226,6 @@ class Indexer:
 
     class ProtocolUpdated:
         def new(self, session, indx, block, args):
-            logging.debug("[+] ProtocolUpdated")
-            print(args)
-
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             coverage_amount = args["coverageAmount"]
 
@@ -250,9 +241,11 @@ class Indexer:
         # get last block indexed from database
         with Session() as s:
             start_block = s.query(IndexerState).first().last_block
+            logger.debug("Starting indexer loop from block %s", start_block)
 
         t = threading.currentThread()
-        logging.debug("Thread started")
+        logger.debug("Thread started")
+
         while getattr(t, "do_run", True):
             try:
                 s = Session()
@@ -265,6 +258,12 @@ class Indexer:
                     end_block = current_block
 
                 if start_block > end_block:
+                    logger.debug(
+                        "Block %s not yet mined. Last block %s. Sleeping for %ss.",
+                        start_block,
+                        current_block,
+                        settings.INDEXER_SLEEP_BETWEEN_CALL,
+                    )
                     time.sleep(settings.INDEXER_SLEEP_BETWEEN_CALL)
                     continue
 
@@ -282,21 +281,24 @@ class Indexer:
                 indx.last_block = start_block
                 s.commit()
             except Exception as e:
-                logging.exception("Encountered exception %s" % e)
+                logger.exception(e)
                 time.sleep(settings.INDEXER_SLEEP_BETWEEN_CALL)
 
     def index_intervals(self, session, indx, block):
+        logger.debug("Running interval indexing functions")
         for func, interval in self.intervals.items():
             if block % interval >= self.blocks_per_call:
                 continue
 
+            logger.debug("Running interval function  %s", func.__name__)
             try:
                 func(session, indx, block)
-            except IntegrityError:
-                logging.warning(
+            except IntegrityError as e:
+                logger.error(
                     "Could not process stats on block %s",
                     block,
                 )
+                logger.exception(e)
                 session.rollback()
                 continue
 
@@ -306,28 +308,35 @@ class Indexer:
         self.index_events(session, indx, start_block, end_block)
 
         took_seconds = (datetime.utcnow() - start).microseconds / 1000
-        logging.debug(
-            "took %s ms to listen to all events. listened to %s blocks (range %s-%s)"
+        logger.debug(
+            "Took %s ms to listen to all events. listened to %s blocks (range %s-%s)"
             % (took_seconds, (end_block - start_block) + 1, start_block, end_block)
         )
 
         if took_seconds > (end_block - start_block) + 1 * 1000:
             # Can not keep up with the blocks that are created
-            logging.warning(
+            logger.warning(
                 "Can not keep up with the blocks that are created took %s microseconds for %s blocks"
                 % (took_seconds, (end_block - start_block) + 1)
             )
 
     def index_events(self, session, indx, start_block, end_block):
+        logger.debug("Indexing events in block range %s-%s", start_block, end_block)
+
         # Commit on every insert so indexer doesn't halt on single failure
         for event, func in self.events.items():
             entries = get_event_logs_in_range(event, start_block, end_block)
+            logger.debug("Found %s %s events.", len(entries), event.__name__)
+
             for entry in entries:
+                logger.debug("Processing %s event - Args: %s", entry["event"], entry["args"].__dict__)
+
                 try:
                     func(self, session, indx, entry["blockNumber"], entry["args"])
                     session.commit()
-                except IntegrityError:
-                    logging.warning(
+                except IntegrityError as e:
+                    logger.exception(e)
+                    logger.warning(
                         "Could not process an %s event from smart contract with arguments %s",
                         entry["event"],
                         entry["args"],
@@ -335,10 +344,11 @@ class Indexer:
                     session.rollback()
                     continue
 
-                logging.debug("Processed %s event from smart contract", entry["event"])
+                logger.debug("Processed %s event from smart contract", entry["event"])
 
 
 if __name__ == "__main__":
-    print("started indexer")
+    logger.info("Started indexer process")
+
     indexer = Indexer()
     indexer.start()
