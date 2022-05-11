@@ -50,6 +50,9 @@ class Indexer:
         Currently, this case does not pose an issue, but in the case we will ever delete the protocol
         from the database, on ProtocolRemoved event, we must make sure that event is indexed last,
         so the other event handlers will still have access to the corresponding protocol instance.
+
+        Note: As all contract events are processed in a single database transaction per block,
+        it doesn't cause any unexpected data mutations during the processing.
         """
         self.events = {
             settings.CORE_WSS.events.Transfer: self.Transfer.new,
