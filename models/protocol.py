@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 
 from sqlalchemy import Column, Integer, Text
-from sqlalchemy.dialects.postgresql import TIMESTAMP
+from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
 
 from models.base import Base
 
@@ -16,6 +16,7 @@ class Protocol(Base):
     bytes_identifier = Column(Text, nullable=False, unique=True)
     agent = Column(Text, nullable=False)
     coverage_ended_at = Column(TIMESTAMP)
+    tvl = Column(NUMERIC(78), nullable=True)
 
     @staticmethod
     def parse_bytes_id(bytes):
@@ -58,4 +59,5 @@ class Protocol(Base):
             "bytes_identifier": self.bytes_identifier,
             "agent": self.agent,
             "coverage_ended_at": int(self.coverage_ended_at.timestamp()) if self.coverage_ended_at else None,
+            "tvl": self.tvl,
         }

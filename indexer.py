@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from decimal import Decimal, getcontext
 from timeit import default_timer as timer
 
-import requests
 from sqlalchemy.exc import IntegrityError
 from web3.constants import ADDRESS_ZERO
 
@@ -23,7 +22,7 @@ from models import (
     StatsTVC,
     StatsTVL,
 )
-from utils import get_event_logs_in_range, time_delta_apy
+from utils import get_event_logs_in_range, requests_retry_session, time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
@@ -135,6 +134,7 @@ class Indexer:
         timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
         accumulated_tvc_for_block = 0
 
+        requests = requests_retry_session()
         try:
             for row in settings.PROTOCOLS_CSV:
                 if "id" not in row:
@@ -160,8 +160,11 @@ class Indexer:
 
                 for tvl_data_point in reversed(tvl_historical_data):
                     if tvl_data_point["date"] < int(timestamp):
+                        # Update protocol's TVL
+                        protocol.tvl = tvl_data_point["totalLiquidityUSD"] * 1000000
+
                         # if protocol's TVL < coverage_amount => TVC = TVL, otherwise TVC = coverage_amount
-                        tvc = min(tvl_data_point["totalLiquidityUSD"] * 1000000, protocol_coverage.coverage_amount)
+                        tvc = min(protocol.tvl, protocol_coverage.coverage_amount)
                         accumulated_tvc_for_block += int(tvc)
                         break
 
