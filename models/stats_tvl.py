@@ -1,10 +1,13 @@
 import json
+import logging
 from datetime import datetime
 
 from sqlalchemy import Column, Integer
-from sqlalchemy.dialects.postgresql import TIMESTAMP, NUMERIC, BIGINT
+from sqlalchemy.dialects.postgresql import BIGINT, NUMERIC, TIMESTAMP
 
 from models.base import Base
+
+logger = logging.getLogger(__name__)
 
 
 class StatsTVL(Base):
@@ -13,10 +16,11 @@ class StatsTVL(Base):
     id = Column(BIGINT, primary_key=True)
     timestamp = Column(TIMESTAMP, nullable=False, default=datetime.min)
     value = Column(NUMERIC(78), nullable=False)
-    block = Column(Integer, default=0)
+    block = Column(Integer, default=0, nullable=False)
 
     @staticmethod
     def insert(session, block, timestamp, value):
+        logger.info("Inserting TVL value of %s at %s", value, timestamp)
         tvl = StatsTVL()
         tvl.timestamp = timestamp
         tvl.value = value

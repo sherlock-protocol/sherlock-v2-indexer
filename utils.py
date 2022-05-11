@@ -12,6 +12,8 @@ from web3.contract import ContractEvent
 
 SECONDS_IN_A_YEAR = Decimal(timedelta(days=365).total_seconds())
 
+logger = logging.getLogger(__name__)
+
 
 def time_delta_apy(old, new, time_delta):
     """
@@ -61,7 +63,7 @@ def retry(count=3):
                 try:
                     return func(*args, **kwargs)
                 except Exception as ex:
-                    logging.exception(ex)
+                    logger.exception(ex)
 
                     delay = 2**attempt + random.uniform(0, 1)
                     time.sleep(delay)

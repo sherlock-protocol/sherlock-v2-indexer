@@ -1,9 +1,12 @@
+import logging
 from datetime import datetime
 
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
 
 from models.base import Base
+
+logger = logging.getLogger(__name__)
 
 
 class Protocol(Base):
@@ -25,6 +28,7 @@ class Protocol(Base):
 
     @staticmethod
     def insert(session, bytes_identifier):
+        logger.info("Creating protocol %s", bytes_identifier)
         protocol = Protocol()
         protocol.bytes_identifier = bytes_identifier
         protocol.agent = "0x0"
@@ -33,14 +37,17 @@ class Protocol(Base):
 
     @staticmethod
     def update_agent(session, bytes_identifier, agent):
+        logger.info("Updating agent to %s for protocol %s", agent, bytes_identifier)
         protocol = Protocol.get(session, bytes_identifier)
         if not protocol:
+            logger.error("Protocol %s not found!", bytes_identifier)
             return
 
         protocol.agent = agent
 
     @staticmethod
     def remove(session, bytes_identifier, timestamp):
+        logger.info("Removing protocol %s", bytes_identifier)
         protocol = Protocol.get(session, bytes_identifier)
         if not protocol:
             return
