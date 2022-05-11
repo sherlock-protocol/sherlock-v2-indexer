@@ -18,6 +18,7 @@ from models import (
     Session,
     StakingPositions,
     StakingPositionsMeta,
+    StatsAPY,
     StatsTVC,
     StatsTVL,
 )
@@ -51,6 +52,7 @@ class Indexer:
         self.intervals = {
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.calc_tvc: settings.INDEXER_STATS_BLOCKS_PER_CALL,
+            self.index_apy: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             # 268 blocks is roughly every hour on current Ethereum mainnet
             self.reset_apy_calc: 268,
         }
@@ -80,6 +82,19 @@ class Indexer:
 
         indx.block_last_updated = block
         indx.last_time = datetime.fromtimestamp(timestamp)
+
+    def index_apy(self, session, indx, block):
+        """Index current APY.
+
+        Args:
+            session: DB session
+            indx: Indexer state
+            block: Current block
+        """
+        timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
+        apy = indx.apy
+
+        StatsAPY.insert(session, block, timestamp, apy)
 
     def calc_tvl(self, session, indx, block):
         timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])

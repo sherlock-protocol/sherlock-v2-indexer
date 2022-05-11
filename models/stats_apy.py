@@ -1,32 +1,32 @@
 import json
 from datetime import datetime
 
-from sqlalchemy import Column, Integer
-from sqlalchemy.dialects.postgresql import BIGINT, NUMERIC, TIMESTAMP
+from sqlalchemy import Column, Float, Integer
+from sqlalchemy.dialects.postgresql import BIGINT, TIMESTAMP
 
 from models.base import Base
 
 
-class StatsTVL(Base):
-    __tablename__ = "stats_tvl"
+class StatsAPY(Base):
+    __tablename__ = "stats_apy"
 
     id = Column(BIGINT, primary_key=True)
     timestamp = Column(TIMESTAMP, nullable=False, default=datetime.min)
-    value = Column(NUMERIC(78), nullable=False)
-    block = Column(Integer, default=0, nullable=False)
+    value = Column(Float, nullable=False)
+    block = Column(Integer, default=0)
 
     @staticmethod
     def insert(session, block, timestamp, value):
-        tvl = StatsTVL()
-        tvl.timestamp = timestamp
-        tvl.value = value
-        tvl.block = block
+        apy = StatsAPY()
+        apy.timestamp = timestamp
+        apy.value = value
+        apy.block = block
 
-        session.add(tvl)
+        session.add(apy)
 
     @staticmethod
     def find_all(session, offset, limit):
-        return session.query(StatsTVL).order_by(StatsTVL.timestamp.asc()).offset(offset).limit(limit).all()
+        return session.query(StatsAPY).order_by(StatsAPY.timestamp.asc()).offset(offset).limit(limit).all()
 
     def to_dict(self):
         """Converts object to dict.
