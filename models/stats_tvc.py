@@ -16,7 +16,7 @@ class StatsTVC(Base):
     id = Column(BIGINT, primary_key=True)
     timestamp = Column(TIMESTAMP, nullable=False, default=datetime.min)
     value = Column(NUMERIC(78), nullable=False)
-    block = Column(Integer, default=0)
+    block = Column(Integer, default=0, nullable=False)
 
     @staticmethod
     def insert(session, block, timestamp, value):

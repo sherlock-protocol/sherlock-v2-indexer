@@ -6,8 +6,9 @@ from .protocol_coverage import ProtocolCoverage
 from .protocol_premium import ProtocolPremium
 from .staking_position import StakingPositions
 from .staking_positions_meta import StakingPositionsMeta
-from .stats_tvl import StatsTVL
+from .stats_apy import StatsAPY
 from .stats_tvc import StatsTVC
+from .stats_tvl import StatsTVL
 
 __all__ = [
     Base,
@@ -21,5 +22,6 @@ __all__ = [
     ProtocolPremium,
     StatsTVL,
     StatsTVC,
-    ProtocolCoverage
+    ProtocolCoverage,
+    StatsAPY,
 ]
