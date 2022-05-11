@@ -28,12 +28,24 @@ class Protocol(Base):
 
     @staticmethod
     def insert(session, bytes_identifier):
-        logger.info("Creating protocol %s", bytes_identifier)
-        protocol = Protocol()
-        protocol.bytes_identifier = bytes_identifier
-        protocol.agent = "0x0"
+        logger.info("Adding protocol %s", bytes_identifier)
+        protocol = Protocol.get(session, bytes_identifier)
 
-        session.add(protocol)
+        if not protocol:
+            protocol = Protocol()
+            protocol.bytes_identifier = bytes_identifier
+            # Protocol agent is not available in the ProtocolAdded event,
+            # but a ProtocolAgentTransfer event is emitted in the same block
+            # which will update this instance to it's correct addres.
+            protocol.agent = "0x0"
+            session.add(protocol)
+        else:
+            logger.info("Re-enabling inactive protocol")
+            # When a protocol is re-added, we should only mark the protocol
+            # as active. The other events: ProtocolAgentTransfer, ProtocolUpdated
+            # and protocolPremiumChanged will update this instance to hold
+            # the new values.
+            protocol.coverage_ended_at = None
 
     @staticmethod
     def update_agent(session, bytes_identifier, agent):

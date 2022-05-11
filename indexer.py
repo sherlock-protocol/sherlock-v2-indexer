@@ -37,6 +37,23 @@ class Indexer:
         if blocks_per_call:
             self.blocks_per_call = blocks_per_call
 
+        """Mapping between contract events and indexing functions.
+
+        The order is important, because some events may be emitted in bulk, in the same block.
+
+        For example, when adding a new protocol, the ProtocolAgentTransfer event is emitted before ProtocolAdded.
+        In this case, we need to first process the ProtocolAdded event, to save the newly added protocol,
+        and then process ProtocolAgentTransfer, in order to change that protocol's agent address.
+
+        Another example would be on protocol removal, when ProtocolPremiumChanged, ProtocolAgentTransfer,
+        ProtocolUpdated and ProtocolRemoved events are all emitted in the same block.
+        Currently, this case does not pose an issue, but in the case we will ever delete the protocol
+        from the database, on ProtocolRemoved event, we must make sure that event is indexed last,
+        so the other event handlers will still have access to the corresponding protocol instance.
+
+        Note: As all contract events are processed in a single database transaction per block,
+        it doesn't cause any unexpected data mutations during the processing.
+        """
         self.events = {
             settings.CORE_WSS.events.Transfer: self.Transfer.new,
             settings.CORE_WSS.events.Restaked: self.Restaked.new,
@@ -252,10 +269,7 @@ class Indexer:
         def new(self, session, indx, block, args):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
 
-            protocol = Protocol.get(session, protocol_bytes_id)
-            if not protocol:
-                print("Adding protocol")
-                Protocol.insert(session, protocol_bytes_id)
+            Protocol.insert(session, protocol_bytes_id)
 
     class ProtocolAgentTransfer:
         def new(self, session, indx, block, args):
