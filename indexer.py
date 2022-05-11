@@ -37,15 +37,29 @@ class Indexer:
         if blocks_per_call:
             self.blocks_per_call = blocks_per_call
 
+        """Mapping between contract events and indexing functions.
+
+        The order is important, because some events may be emitted in bulk, in the same block.
+
+        For example, when adding a new protocol, the ProtocolAgentTransfer event is emitted before ProtocolAdded.
+        In this case, we need to first process the ProtocolAdded event, to save the newly added protocol,
+        and then process ProtocolAgentTransfer, in order to change that protocol's agent address.
+
+        Another example would be on protocol removal, when ProtocolPremiumChanged, ProtocolAgentTransfer,
+        ProtocolUpdated and ProtocolRemoved events are all emitted in the same block.
+        Currently, this case does not pose an issue, but in the case we will ever delete the protocol
+        from the database, on ProtocolRemoved event, we must make sure that event is indexed last,
+        so the other event handlers will still have access to the corresponding protocol instance.
+        """
         self.events = {
             settings.CORE_WSS.events.Transfer: self.Transfer.new,
             settings.CORE_WSS.events.Restaked: self.Restaked.new,
             settings.CORE_WSS.events.ArbRestaked: self.Restaked.new,
             settings.SHER_BUY_WSS.events.Purchase: self.Purchase.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolAdded: self.ProtocolAdded.new,
+            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolPremiumChanged: self.ProtocolPremiumChanged.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolAgentTransfer: self.ProtocolAgentTransfer.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolUpdated: self.ProtocolUpdated.new,
-            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolPremiumChanged: self.ProtocolPremiumChanged.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemoved: self.ProtocolRemoved.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
         }
