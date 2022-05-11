@@ -3,6 +3,7 @@ import threading
 import time
 from datetime import datetime, timedelta
 from decimal import Decimal, getcontext
+from timeit import default_timer as timer
 
 import requests
 from sqlalchemy.exc import IntegrityError
@@ -27,7 +28,7 @@ from utils import get_event_logs_in_range, time_delta_apy
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
 
-logging.basicConfig(filename="output.log", level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class Indexer:
@@ -67,6 +68,7 @@ class Indexer:
             indx: Indexer state
             block: Current block number
         """
+        logger.info("Computing APY and balance factor")
 
         # Skip computation if meta has not been initialised yet
         # (we do not have a reference point in time - a T0).
@@ -74,6 +76,7 @@ class Indexer:
         # or on the first tick of `reset_apy_calc`.
         meta = StakingPositionsMeta.get(session)
         if meta.usdc_last_updated == datetime.min:
+            logger.info("Meta not yet initialised. Returning...")
             return
 
         # Compute the time delta between current block's timestamp
@@ -82,6 +85,7 @@ class Indexer:
         timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
         position_timedelta = timestamp - meta.usdc_last_updated.timestamp()
         if position_timedelta == 0:
+            logger.info("No time has passed since last computation. Returning...")
             return
 
         # Fetch an active staking position
@@ -90,10 +94,12 @@ class Indexer:
         # Fetch current position balance as well as
         # the increase since the last computation (a.k.a the balance factor)
         usdc, factor = position.get_balance_data(block)
+        logger.info("Computed a balance factor of %s", factor)
 
         # Compute the APY knowing the balance delta and time delta
         # TODO make compounding?
         apy = time_delta_apy(position.usdc, usdc, position_timedelta)
+        logger.info("Computed an APY of %s", apy)
 
         # Save the computation by updating the indexer state
         indx.balance_factor = factor
@@ -161,7 +167,7 @@ class Indexer:
 
             StatsTVC.insert(session, block, datetime.fromtimestamp(timestamp), accumulated_tvc_for_block)
         except Exception as e:
-            logging.exception("TVC calc encountered exception %s" % e)
+            logger.exception("TVC calc encountered exception %s" % e)
 
     def reset_apy_calc(self, session, indx, block):
         """Update staking positions' balances to become up to date
@@ -241,8 +247,6 @@ class Indexer:
 
     class ProtocolAdded:
         def new(self, session, indx, block, args):
-            logging.debug("[+] ProtocolAdded")
-
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
 
             protocol = Protocol.get(session, protocol_bytes_id)
@@ -252,7 +256,6 @@ class Indexer:
 
     class ProtocolAgentTransfer:
         def new(self, session, indx, block, args):
-            logging.debug("[+] ProtocolAgentTransfer")
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             new_agent = args["to"]
 
@@ -260,7 +263,6 @@ class Indexer:
 
     class ProtocolPremiumChanged:
         def new(self, session, indx, block, args):
-            logging.debug("[+] ProtocolPremiumChanged")
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             new_premium = args["newPremium"]
 
@@ -274,7 +276,6 @@ class Indexer:
 
     class ProtocolRemoved:
         def new(self, session, indx, block, args):
-            logging.debug("[+] ProtocolRemoved/ProtocolRemovedByArb")
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
@@ -282,7 +283,6 @@ class Indexer:
 
     class Restaked:
         def new(self, session, indx, block, args):
-            logging.debug("[+] Restaked")
             token_id = args["tokenID"]
 
             # Update all database entries to be up to date with block
@@ -293,9 +293,6 @@ class Indexer:
 
     class ProtocolUpdated:
         def new(self, session, indx, block, args):
-            logging.debug("[+] ProtocolUpdated")
-            print(args)
-
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             coverage_amount = args["coverageAmount"]
 
@@ -311,9 +308,11 @@ class Indexer:
         # get last block indexed from database
         with Session() as s:
             start_block = s.query(IndexerState).first().last_block
+            logger.info("Starting indexer loop from block %s", start_block)
 
         t = threading.currentThread()
-        logging.debug("Thread started")
+        logger.info("Thread started")
+
         while getattr(t, "do_run", True):
             try:
                 s = Session()
@@ -326,6 +325,12 @@ class Indexer:
                     end_block = current_block
 
                 if start_block > end_block:
+                    logger.info(
+                        "Block %s not yet mined. Last block %s. Sleeping for %ss.",
+                        start_block,
+                        current_block,
+                        settings.INDEXER_SLEEP_BETWEEN_CALL,
+                    )
                     time.sleep(settings.INDEXER_SLEEP_BETWEEN_CALL)
                     continue
 
@@ -343,52 +348,62 @@ class Indexer:
                 indx.last_block = start_block
                 s.commit()
             except Exception as e:
-                logging.exception("Encountered exception %s" % e)
+                logger.exception(e)
                 time.sleep(settings.INDEXER_SLEEP_BETWEEN_CALL)
 
     def index_intervals(self, session, indx, block):
+        logger.info("Running interval indexing functions")
         for func, interval in self.intervals.items():
             if block % interval >= self.blocks_per_call:
                 continue
 
+            logger.info("Running interval function  %s", func.__name__)
             try:
                 func(session, indx, block)
-            except IntegrityError:
-                logging.warning(
+            except IntegrityError as e:
+                logger.error(
                     "Could not process stats on block %s",
                     block,
                 )
+                logger.exception(e)
                 session.rollback()
                 continue
 
     def index_events_time(self, session, indx, start_block, end_block):
-        start = datetime.utcnow()
+        start = timer()
 
         self.index_events(session, indx, start_block, end_block)
 
-        took_seconds = (datetime.utcnow() - start).microseconds / 1000
-        logging.debug(
-            "took %s ms to listen to all events. listened to %s blocks (range %s-%s)"
+        took_seconds = timer() - start
+        logger.info(
+            "Took %ss to listen to all events. Listened to %s blocks (range %s-%s)"
             % (took_seconds, (end_block - start_block) + 1, start_block, end_block)
         )
 
         if took_seconds > (end_block - start_block) + 1 * 1000:
             # Can not keep up with the blocks that are created
-            logging.warning(
-                "Can not keep up with the blocks that are created took %s microseconds for %s blocks"
+            logger.warning(
+                "Can not keep up with the blocks that are created. Took %s seconds for %s blocks"
                 % (took_seconds, (end_block - start_block) + 1)
             )
 
     def index_events(self, session, indx, start_block, end_block):
+        logger.info("Indexing events in block range %s-%s", start_block, end_block)
+
         # Commit on every insert so indexer doesn't halt on single failure
         for event, func in self.events.items():
             entries = get_event_logs_in_range(event, start_block, end_block)
+            logger.info("Found %s %s events.", len(entries), event.__name__)
+
             for entry in entries:
+                logger.info("Processing %s event - Args: %s", entry["event"], entry["args"].__dict__)
+
                 try:
                     func(self, session, indx, entry["blockNumber"], entry["args"])
                     session.commit()
-                except IntegrityError:
-                    logging.warning(
+                except IntegrityError as e:
+                    logger.exception(e)
+                    logger.warning(
                         "Could not process an %s event from smart contract with arguments %s",
                         entry["event"],
                         entry["args"],
@@ -396,10 +411,11 @@ class Indexer:
                     session.rollback()
                     continue
 
-                logging.debug("Processed %s event from smart contract", entry["event"])
+                logger.info("Processed %s event from smart contract", entry["event"])
 
 
 if __name__ == "__main__":
-    print("started indexer")
+    logger.info("Started indexer process")
+
     indexer = Indexer()
     indexer.start()

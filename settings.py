@@ -1,12 +1,13 @@
+import csv
 import json
 import os
-import csv
+from logging import Formatter, StreamHandler, getLogger
+from logging.handlers import TimedRotatingFileHandler
 
 from decouple import config
 from sqlalchemy import create_engine
 from web3 import Web3, WebsocketProvider
 from web3.middleware import geth_poa_middleware
-
 
 API_HOST = config("API_HOST", default="127.0.0.1")
 API_PORT = config("API_PORT", default=5000, cast=int)
@@ -69,3 +70,37 @@ LAST_POSITION_ID_FOR_15PERC_APY = config("LAST_POSITION_ID_FOR_15PERC_APY", cast
 # Protocols (from local csv file, kept in memory)
 with open("./meta/protocols.csv", newline="") as csv_file:
     PROTOCOLS_CSV = list(csv.DictReader(csv_file))
+
+# LOGGING
+# ------------------------------------------------------------------------------
+logger = getLogger()
+logger.setLevel("DEBUG")
+
+# Create custom formatter
+verbose_formatter = Formatter(
+    (
+        "[%(asctime)s] %(levelname)-7s "
+        "%(module)s %(name)s "
+        "{%(filename)s:%(lineno)d} %(process)d %(thread)d - %(message)s"
+    )
+)
+
+
+# Redirect INFO+ logs to console and output.log
+file_handler = TimedRotatingFileHandler(filename="output.log", when="midnight", utc=True)
+file_handler.setLevel("INFO")
+file_handler.setFormatter(verbose_formatter)
+
+console_handler = StreamHandler()
+console_handler.setLevel("INFO")
+console_handler.setFormatter(verbose_formatter)
+
+# Redirect DEBUG+ logs to separate file
+debug_file_handler = TimedRotatingFileHandler(filename="debug_output.log", when="midnight", utc=True)
+debug_file_handler.setLevel("DEBUG")
+debug_file_handler.setFormatter(verbose_formatter)
+
+logger.handlers = []
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+logger.addHandler(debug_file_handler)

@@ -1,9 +1,12 @@
+import logging
 from datetime import datetime
 
 from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
 
 from models.base import Base
+
+logger = logging.getLogger(__name__)
 
 
 class ProtocolPremium(Base):
@@ -16,6 +19,7 @@ class ProtocolPremium(Base):
 
     @staticmethod
     def insert(session, protocol_id, premium, timestamp):
+        logger.info("Creating protocol premium in amount of %s for protocol %s", premium, protocol_id)
         premium_set_at = datetime.fromtimestamp(timestamp)
 
         # Check if premium change has already been saved

@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime, timedelta
 
 from sqlalchemy import Column, Integer, String, desc
@@ -6,6 +7,8 @@ from sqlalchemy.dialects.postgresql import BIGINT, NUMERIC, TIMESTAMP
 
 import settings
 from models.base import Base
+
+logger = logging.getLogger(__name__)
 
 
 class StakingPositions(Base):
@@ -32,6 +35,7 @@ class StakingPositions(Base):
 
     @staticmethod
     def insert(session, block, id, owner):
+        logger.info("Saving staking position #%s for %s", id, owner)
         lockup_end = settings.CORE_WSS.functions.lockupEnd(id).call(block_identifier=block)
 
         usdc = settings.CORE_WSS.functions.tokenBalanceOf(id).call(block_identifier=block)
@@ -49,10 +53,12 @@ class StakingPositions(Base):
 
     @staticmethod
     def update(session, id, owner):
+        logger.info("Transferring staking position #%s to %s", id, owner)
         session.query(StakingPositions).filter_by(id=id).one().owner = owner
 
     @staticmethod
     def delete(session, id):
+        logger.info("Deleting staking position #%s", id)
         session.query(StakingPositions).filter_by(id=id).delete()
 
     @staticmethod
@@ -61,9 +67,11 @@ class StakingPositions(Base):
 
     @staticmethod
     def restake(session, block, id):
+        logger.info("Restaking position #%s", id)
         position = session.query(StakingPositions).filter_by(id=id).first()
 
         if not position:
+            logger.error("Staking position %s not found!", id)
             return
 
         # Update staking position with latest blockchain data
