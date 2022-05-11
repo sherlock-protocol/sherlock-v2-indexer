@@ -266,10 +266,7 @@ class Indexer:
         def new(self, session, indx, block, args):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
 
-            protocol = Protocol.get(session, protocol_bytes_id)
-            if not protocol:
-                print("Adding protocol")
-                Protocol.insert(session, protocol_bytes_id)
+            Protocol.insert(session, protocol_bytes_id)
 
     class ProtocolAgentTransfer:
         def new(self, session, indx, block, args):
