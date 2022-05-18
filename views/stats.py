@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime
 
 from flask import request
 from sqlalchemy import asc, func
@@ -82,9 +82,8 @@ def stats_unlock():
 
     data_points = []
 
-    # Add initial data point, with the full TVL and with a timestamp
-    # a second before the first unlockable position.
-    initial_timestamp = all_positions[0][0] - timedelta(seconds=1)
+    # Add initial data point, with the full TVL, at T0=NOW
+    initial_timestamp = datetime.now()
     data_points.append({"timestamp": int(initial_timestamp.timestamp()), "value": total_value_locked})
 
     # Iterate through all positions and create a new data point
