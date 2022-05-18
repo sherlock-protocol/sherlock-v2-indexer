@@ -1,7 +1,7 @@
-from datetime import timedelta
+from datetime import datetime
 
+import sqlalchemy as sa
 from flask import request
-from sqlalchemy import asc, func
 
 from flask_app import app
 from models import Session, StatsAPY, StatsTVC, StatsTVL
@@ -66,11 +66,12 @@ def stats_apy():
 def stats_unlock():
     with Session() as s:
         # Fetch all StakingPositions and apply a GROUP BY to sum the values of positions
-        # with the same unlock timestamp, and sort them by the lockup period.
+        # in the same day, and sort them ascending.
+        # We cast `lockup_end` to DATE in order to loose the time part, so we can group them by day.
         all_positions = (
-            s.query(StakingPositions.lockup_end, func.sum(StakingPositions.usdc))
-            .group_by(StakingPositions.lockup_end)
-            .order_by(asc(StakingPositions.lockup_end))
+            s.query(sa.cast(StakingPositions.lockup_end, sa.Date).label("date"), sa.func.sum(StakingPositions.usdc))
+            .group_by(sa.text("date"))
+            .order_by(sa.text("date asc"))
             .all()
         )
 
@@ -82,9 +83,8 @@ def stats_unlock():
 
     data_points = []
 
-    # Add initial data point, with the full TVL and with a timestamp
-    # a second before the first unlockable position.
-    initial_timestamp = all_positions[0][0] - timedelta(seconds=1)
+    # Add initial data point, with the full TVL, at T0=NOW
+    initial_timestamp = datetime.now()
     data_points.append({"timestamp": int(initial_timestamp.timestamp()), "value": total_value_locked})
 
     # Iterate through all positions and create a new data point
@@ -92,7 +92,9 @@ def stats_unlock():
     # the TVL minus the value of all staking positions unstaked by that time.
     for position in all_positions:
         total_value_locked -= position[1]
-        data_points.append({"timestamp": int(position[0].timestamp()), "value": total_value_locked})
+        # We convert date to datetime
+        timestamp = datetime.combine(position[0], datetime.min.time())
+        data_points.append({"timestamp": int(timestamp.timestamp()), "value": total_value_locked})
 
     return {
         "ok": True,
