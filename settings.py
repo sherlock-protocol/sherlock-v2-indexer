@@ -58,6 +58,17 @@ SHERLOCK_PROTOCOL_MANAGER_WSS = WEB3_WSS.eth.contract(
     address=SHERLOCK_PROTOCOL_MANAGER_ADDRESS, abi=SHERLOCK_PROTOCOL_MANAGER_ABI
 )
 
+SHERLOCK_CLAIM_MANAGER_ADDRESS = config("SHERLOCK_V2_CLAIM_MANAGER")
+with open(
+    os.path.join(
+        REPO, "artifacts", "contracts", "managers", "SherlockClaimManager.sol", "SherlockClaimManager.json"
+    )
+) as json_data:
+    SHERLOCK_CLAIM_MANAGER_ABI = json.load(json_data)["abi"]
+SHERLOCK_CLAIM_MANAGER_WSS = WEB3_WSS.eth.contract(
+    address=SHERLOCK_CLAIM_MANAGER_ADDRESS, abi=SHERLOCK_CLAIM_MANAGER_ABI
+)
+
 SHER_CLAIM_AT = SHER_CLAIM_WSS.functions.newEntryDeadline().call() + 60 * 60 * 24 * 7 * 26  # + 26 weeks
 
 INDEXER_BLOCKS_PER_CALL = 5
