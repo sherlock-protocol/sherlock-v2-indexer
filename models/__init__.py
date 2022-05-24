@@ -9,6 +9,7 @@ from .staking_positions_meta import StakingPositionsMeta
 from .stats_apy import StatsAPY
 from .stats_tvc import StatsTVC
 from .stats_tvl import StatsTVL
+from .claim import Claim
 
 __all__ = [
     Base,
@@ -24,4 +25,5 @@ __all__ = [
     StatsTVC,
     ProtocolCoverage,
     StatsAPY,
+    Claim
 ]

@@ -1,4 +1,6 @@
 import logging
+import json
+
 from datetime import datetime
 
 from sqlalchemy import Column, ForeignKey, Integer
@@ -46,3 +48,28 @@ class Claim(Base):
             return
 
         claim.status = status
+
+    @staticmethod
+    def get_active_claim_by_protocol(session, protocol_id):
+        claim = session.query(Claim).filter_by(protocol_id=protocol_id).filter(
+            Claim.status > 0).one_or_none()
+        return claim
+
+    def to_dict(self):
+        """Converts object to dict.
+        @return: dict
+        """
+        d = {}
+        for column in self.__table__.columns:
+            data = getattr(self, column.name)
+            if column.name in ["exploit_started_at", "timestamp"] and data is not None:
+                d[column.name] = int(data.timestamp())
+                continue
+            d[column.name] = data
+        return d
+
+    def to_json(self):
+        """Converts object to JSON.
+        @return: JSON data
+        """
+        return json.dumps(self.to_dict(), default=str)
