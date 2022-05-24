@@ -23,7 +23,7 @@ def upgrade():
         "claims",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("protocol_id", sa.Integer(), nullable=False),
-        sa.Column("exploit_started_at", postgresql.TIMESTAMP(), nullable=False),
+        sa.Column("exploit_started_at", postgresql.TIMESTAMP(), nullable=True),
         sa.Column("amount", sa.NUMERIC(precision=78), nullable=False),
         sa.Column("status", sa.Integer, default=0),
         sa.Column("timestamp", postgresql.TIMESTAMP(), nullable=False)
