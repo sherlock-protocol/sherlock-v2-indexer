@@ -7,6 +7,7 @@ from timeit import default_timer as timer
 
 from sqlalchemy.exc import IntegrityError
 from web3.constants import ADDRESS_ZERO
+from models.claim import Claim
 
 import settings
 from models import (
@@ -65,6 +66,9 @@ class Indexer:
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolPremiumChanged: self.ProtocolPremiumChanged.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemoved: self.ProtocolRemoved.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
+            settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimCreated: self.ClaimCreated.new,
+            settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimStatusChanged: self.ClaimStatusChanged.new,
+            settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimPayout: self.ClaimPayout.new
         }
         self.intervals = {
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
@@ -320,6 +324,35 @@ class Indexer:
             timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
             ProtocolCoverage.update(session, protocol.id, coverage_amount, timestamp)
+
+    class ClaimCreated:
+        def new(self, session, indx, block, args):
+            protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
+            protocol = Protocol.get(session, protocol_bytes_id)
+
+            if not protocol:
+                return
+
+            print(protocol)
+
+            (created, _, _, _, _, _, exploit_started_at, _, _) = settings.SHERLOCK_CLAIM_MANAGER_WSS.functions.claim(
+                args["claimID"]).call(block_identifier=block)
+
+            Claim.insert(session, args["claimID"], protocol.id, args["amount"], exploit_started_at, created)
+            return
+
+    class ClaimStatusChanged:
+        def new(self, session, indx, block, args):
+            claim_id = args["claimID"]
+            new_status = args["currentState"]
+
+            Claim.update_status(session, claim_id, new_status)
+
+            return
+
+    class ClaimPayout:
+        def new(self, session, indx, block, args):
+            return
 
     def start(self):
         # get last block indexed from database
