@@ -31,7 +31,7 @@ class Claim(Base):
         claim.id = id
         claim.protocol_id = protocol_id
         claim.amount = amount
-        claim.explot_started_at = exploit_started_at
+        claim.exploit_started_at = exploit_started_at
         claim.status = 0
         claim.timestamp = created_at
 
