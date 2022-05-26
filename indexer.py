@@ -335,10 +335,11 @@ class Indexer:
 
             print(protocol)
 
-            (created, _, _, _, _, _, exploit_started_at, _, _) = settings.SHERLOCK_CLAIM_MANAGER_WSS.functions.claim(
+            (created, _, initiator, _, _, receiver, exploit_started_at, _, _) = settings.SHERLOCK_CLAIM_MANAGER_WSS.functions.claim(
                 args["claimID"]).call(block_identifier=block)
 
-            Claim.insert(session, args["claimID"], protocol.id, args["amount"], exploit_started_at, created)
+            Claim.insert(session, args["claimID"], protocol.id, initiator,
+                         receiver, args["amount"], exploit_started_at, created)
             return
 
     class ClaimStatusChanged:
