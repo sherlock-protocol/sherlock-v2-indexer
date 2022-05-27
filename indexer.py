@@ -346,8 +346,9 @@ class Indexer:
         def new(self, session, indx, block, args):
             claim_id = args["claimID"]
             new_status = args["currentState"]
+            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
-            Claim.update_status(session, claim_id, new_status)
+            Claim.update_status(session, claim_id, new_status, timestamp)
 
             return
 
