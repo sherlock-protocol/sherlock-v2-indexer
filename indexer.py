@@ -148,7 +148,6 @@ class Indexer:
 
         StatsAPY.insert(session, block, timestamp, apy, premiums_apy)
 
-
     def calc_tvl(self, session, indx, block):
         timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
         tvl = settings.CORE_WSS.functions.totalTokenBalanceStakers().call(block_identifier=block)

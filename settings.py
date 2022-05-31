@@ -58,7 +58,6 @@ SHERLOCK_PROTOCOL_MANAGER_WSS = WEB3_WSS.eth.contract(
     address=SHERLOCK_PROTOCOL_MANAGER_ADDRESS, abi=SHERLOCK_PROTOCOL_MANAGER_ABI
 )
 
-<<<<<<< HEAD
 SHERLOCK_CLAIM_MANAGER_ADDRESS = config("SHERLOCK_V2_CLAIM_MANAGER")
 with open(
     os.path.join(REPO, "artifacts", "contracts", "managers", "SherlockClaimManager.sol", "SherlockClaimManager.json")
@@ -68,8 +67,6 @@ SHERLOCK_CLAIM_MANAGER_WSS = WEB3_WSS.eth.contract(
     address=SHERLOCK_CLAIM_MANAGER_ADDRESS, abi=SHERLOCK_CLAIM_MANAGER_ABI
 )
 
-=======
->>>>>>> feat: compute additional apy and balances
 with open(
     os.path.join(REPO, "artifacts", "contracts", "strategy", "base", "BaseStrategy.sol", "BaseStrategy.json")
 ) as json_data:
