@@ -24,6 +24,7 @@ class StrategyBalance(Base):
         new_balance.value = value
         new_balance.block = block
         new_balance.value = value
+        new_balance.timestamp = timestamp
 
         session.add(new_balance)
 
