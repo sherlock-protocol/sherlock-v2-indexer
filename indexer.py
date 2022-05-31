@@ -144,6 +144,7 @@ class Indexer:
         premiums_apy = indx.premiums_apy
 
         StatsAPY.insert(session, block, timestamp, apy, premiums_apy)
+        
 
     def calc_tvl(self, session, indx, block):
         timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
