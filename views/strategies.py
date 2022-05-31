@@ -3,6 +3,7 @@ from models import Session, StrategyBalance
 from strategies.strategies import Strategies
 
 
+
 @app.route("/strategies")
 def strategies():
     with Session() as s:
