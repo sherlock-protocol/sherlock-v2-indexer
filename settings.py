@@ -58,6 +58,11 @@ SHERLOCK_PROTOCOL_MANAGER_WSS = WEB3_WSS.eth.contract(
     address=SHERLOCK_PROTOCOL_MANAGER_ADDRESS, abi=SHERLOCK_PROTOCOL_MANAGER_ABI
 )
 
+with open(
+    os.path.join(REPO, "artifacts", "contracts", "strategy", "base", "BaseStrategy.sol", "BaseStrategy.json")
+) as json_data:
+    STRATEGY_ABI = json.load(json_data)["abi"]
+
 SHER_CLAIM_AT = SHER_CLAIM_WSS.functions.newEntryDeadline().call() + 60 * 60 * 24 * 7 * 26  # + 26 weeks
 
 INDEXER_BLOCKS_PER_CALL = 5
