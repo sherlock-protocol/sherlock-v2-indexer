@@ -134,6 +134,8 @@ class Indexer:
         # using the balance factor which accounts for payouts.
         if apy > 0.0 and apy < 0.5 and apy < indx.apy * 2:
             indx.apy = apy
+        else:
+            logger.warning("APY %s is being skipped." % apy)
 
     def index_apy(self, session, indx, block):
         """Index current APY.
