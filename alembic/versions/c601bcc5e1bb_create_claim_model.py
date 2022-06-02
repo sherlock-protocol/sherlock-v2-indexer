@@ -27,6 +27,7 @@ def upgrade():
         sa.Column("receiver", sa.Text(), nullable=False),
         sa.Column("exploit_started_at", postgresql.TIMESTAMP(), nullable=True),
         sa.Column("amount", sa.NUMERIC(precision=78), nullable=False),
+        sa.Column("resources_link", sa.Text(), nullable=True),
         sa.Column("status", sa.Integer, default=0),
         sa.Column("status_updated_at", postgresql.TIMESTAMP(), nullable=False),
         sa.Column("timestamp", postgresql.TIMESTAMP(), nullable=False)

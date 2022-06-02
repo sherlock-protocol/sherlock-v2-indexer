@@ -20,12 +20,13 @@ class Claim(Base):
     receiver = Column(Text, nullable=False)
     exploit_started_at = Column(TIMESTAMP, nullable=True)
     amount = Column(NUMERIC(78), nullable=False)
+    resources_link = Column(Text, nullable=True)
     status = Column(Integer, default=0)
     status_updated_at = Column(TIMESTAMP, nullable=False)
     timestamp = Column(TIMESTAMP, nullable=False)
 
     @staticmethod
-    def insert(session, id, protocol_id, initiator, receiver, amount, exploit_started_at_timestamp, created_at_timestamp):
+    def insert(session, id, protocol_id, initiator, receiver, amount, resources_link, exploit_started_at_timestamp, created_at_timestamp):
         logger.info("Creating claim for protocol %s in amount of %s", protocol_id, amount)
         exploit_started_at = datetime.fromtimestamp(exploit_started_at_timestamp)
         created_at = datetime.fromtimestamp(created_at_timestamp)
@@ -36,6 +37,7 @@ class Claim(Base):
         claim.initiator = initiator
         claim.receiver = receiver
         claim.amount = amount
+        claim.resources_link = resources_link
         claim.exploit_started_at = exploit_started_at
         claim.status = 0
         claim.status_updated_at = created_at

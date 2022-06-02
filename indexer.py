@@ -1,6 +1,8 @@
+import codecs
 import logging
 import threading
 import time
+import shlex
 from datetime import datetime, timedelta
 from decimal import Decimal, getcontext
 from timeit import default_timer as timer
@@ -333,13 +335,16 @@ class Indexer:
             if not protocol:
                 return
 
-            print(protocol)
-
-            (created, _, initiator, _, _, receiver, exploit_started_at, _, _) = settings.SHERLOCK_CLAIM_MANAGER_WSS.functions.claim(
+            (created, _, initiator, _, _, receiver, exploit_started_at, _, ancillary_data) = settings.SHERLOCK_CLAIM_MANAGER_WSS.functions.claim(
                 args["claimID"]).call(block_identifier=block)
 
+            lexer = shlex.shlex(codecs.decode(ancillary_data, "UTF-8"), posix=True)
+            lexer.whitespace_split = True
+            lexer.whitespace = ","
+            ancillary_data_dict = dict(pair.split(":", 1) for pair in lexer)
+
             Claim.insert(session, args["claimID"], protocol.id, initiator,
-                         receiver, args["amount"], exploit_started_at, created)
+                         receiver, args["amount"], ancillary_data_dict["Resources"], exploit_started_at, created)
             return
 
     class ClaimStatusChanged:
