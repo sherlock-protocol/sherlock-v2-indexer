@@ -344,7 +344,7 @@ class Indexer:
             ancillary_data_dict = dict(pair.split(":", 1) for pair in lexer)
 
             Claim.insert(session, args["claimID"], protocol.id, initiator,
-                         receiver, args["amount"], ancillary_data_dict["Resources"], exploit_started_at, created)
+                         receiver, args["amount"], ancillary_data_dict.get("Resources"), exploit_started_at, created)
             return
 
     class ClaimStatusChanged:
