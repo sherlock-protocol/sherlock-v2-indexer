@@ -174,9 +174,11 @@ class Indexer:
 
                 protocol_coverage = protocol_coverages[0]
 
-                hardcoded_tvl = self.hardcoded_tvls.get(protocol.id)
+                # If the TVL is hardcoded, we take the value and avoid calling DefiLlama
+                hardcoded_tvl = self.hardcoded_tvls.get(protocol.bytes_identifier)
                 if hardcoded_tvl:
                     accumulated_tvc_for_block += hardcoded_tvl * 100_000
+                    continue
 
                 # fetch protocol's TVL from DefiLlama
                 response = requests.get("https://api.llama.fi/protocol/" + row["defi_llama_slug"])
