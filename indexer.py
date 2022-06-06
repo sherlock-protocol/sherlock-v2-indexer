@@ -197,7 +197,7 @@ class Indexer:
                 protocol_tvc = min(protocol_tvl, protocol_coverage.coverage_amount)
 
                 # Update protocol's TVL
-                protocol.tvl = protocol_tvc
+                protocol.tvl = protocol_tvl
 
                 accumulated_tvc_for_block += int(protocol_tvc)
 
