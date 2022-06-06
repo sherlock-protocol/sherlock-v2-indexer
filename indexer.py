@@ -186,7 +186,7 @@ class Indexer:
                 for tvl_data_point in reversed(tvl_historical_data):
                     if tvl_data_point["date"] < int(timestamp):
                         # Update protocol's TVL
-                        protocol.tvl = tvl_data_point["totalLiquidityUSD"] * 1000000
+                        protocol.tvl = tvl_data_point["totalLiquidityUSD"] * (10**6)
 
                         # if protocol's TVL < coverage_amount => TVC = TVL, otherwise TVC = coverage_amount
                         tvc = min(protocol.tvl, protocol_coverage.coverage_amount)
