@@ -34,6 +34,7 @@ class Indexer:
     blocks_per_call = settings.INDEXER_BLOCKS_PER_CALL
 
     hardcoded_tvls = {
+        # LiquiFi
         "0x69f4668c272ce31fadcd9c3baa18d332f7b51237a757c2a883b7c95c84d204e3": 500_000
     }
 
@@ -177,7 +178,7 @@ class Indexer:
                 # If the TVL is hardcoded, we take the value and avoid calling DefiLlama
                 hardcoded_tvl = self.hardcoded_tvls.get(protocol.bytes_identifier)
                 if hardcoded_tvl:
-                    accumulated_tvc_for_block += hardcoded_tvl * 100_000
+                    accumulated_tvc_for_block += hardcoded_tvl * (10**6)
                     continue
 
                 # fetch protocol's TVL from DefiLlama
@@ -188,7 +189,7 @@ class Indexer:
                 for tvl_data_point in reversed(tvl_historical_data):
                     if tvl_data_point["date"] < int(timestamp):
                         # Update protocol's TVL
-                        protocol.tvl = tvl_data_point["totalLiquidityUSD"] * 1000000
+                        protocol.tvl = tvl_data_point["totalLiquidityUSD"] * (10**6)
 
                         # if protocol's TVL < coverage_amount => TVC = TVL, otherwise TVC = coverage_amount
                         tvc = min(protocol.tvl, protocol_coverage.coverage_amount)
