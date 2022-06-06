@@ -178,23 +178,28 @@ class Indexer:
                 # If the TVL is hardcoded, we take the value and avoid calling DefiLlama
                 hardcoded_tvl = self.hardcoded_tvls.get(protocol.bytes_identifier)
                 if hardcoded_tvl:
-                    accumulated_tvc_for_block += hardcoded_tvl * (10**6)
+                    protocol_tvl = hardcoded_tvl * (10**6)
+                else:
+                    # fetch protocol's TVL from DefiLlama
+                    response = requests.get("https://api.llama.fi/protocol/" + row["defi_llama_slug"])
+                    data = response.json()
+                    tvl_historical_data = data["chainTvls"]["Ethereum"]["tvl"]
+
+                    for tvl_data_point in reversed(tvl_historical_data):
+                        if tvl_data_point["date"] < int(timestamp):
+                            protocol_tvl = tvl_data_point["totalLiquidityUSD"] * (10**6)
+                            break
+
+                if not protocol_tvl:
                     continue
 
-                # fetch protocol's TVL from DefiLlama
-                response = requests.get("https://api.llama.fi/protocol/" + row["defi_llama_slug"])
-                data = response.json()
-                tvl_historical_data = data["chainTvls"]["Ethereum"]["tvl"]
+                # Update protocol's TVL
+                protocol.tvl = protocol_tvl
 
-                for tvl_data_point in reversed(tvl_historical_data):
-                    if tvl_data_point["date"] < int(timestamp):
-                        # Update protocol's TVL
-                        protocol.tvl = tvl_data_point["totalLiquidityUSD"] * (10**6)
+                # if protocol's TVL < coverage_amount => TVC = TVL, otherwise TVC = coverage_amount
+                protocol_tvc = min(protocol_tvl, protocol_coverage.coverage_amount)
 
-                        # if protocol's TVL < coverage_amount => TVC = TVL, otherwise TVC = coverage_amount
-                        tvc = min(protocol.tvl, protocol_coverage.coverage_amount)
-                        accumulated_tvc_for_block += int(tvc)
-                        break
+                accumulated_tvc_for_block += int(protocol_tvc)
 
             StatsTVC.insert(session, block, datetime.fromtimestamp(timestamp), accumulated_tvc_for_block)
         except Exception as e:
