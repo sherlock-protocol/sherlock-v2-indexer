@@ -193,11 +193,11 @@ class Indexer:
                 if not protocol_tvl:
                     continue
 
-                # if protocol's TVL < coverage_amount => TVC = TVL, otherwise TVC = coverage_amount
-                protocol_tvc = min(protocol_tvl, protocol_coverage.coverage_amount)
-
                 # Update protocol's TVL
                 protocol.tvl = protocol_tvl
+
+                # if protocol's TVL < coverage_amount => TVC = TVL, otherwise TVC = coverage_amount
+                protocol_tvc = min(protocol_tvl, protocol_coverage.coverage_amount)
 
                 accumulated_tvc_for_block += int(protocol_tvc)
 
