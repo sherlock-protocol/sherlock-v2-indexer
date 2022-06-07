@@ -1,5 +1,6 @@
 from flask_app import app
 from models import Claim, Session
+from models.claim_status import ClaimStatus
 
 
 @app.route("/claims/<protocol>/active")
@@ -10,4 +11,6 @@ def active_claims(protocol):
     if claim is None:
         return {"ok": True, "data": None}
 
-    return {"ok": True, "data": claim.to_dict()}
+    claim_status = ClaimStatus.get_claim_status(s, claim.id)
+
+    return {"ok": True, "data": {**claim.to_dict(), "status": [{**status.to_dict()} for status in claim_status]}}

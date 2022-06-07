@@ -1,3 +1,4 @@
+from models.claim_status import ClaimStatus
 from .base import Base, Session, engine
 from .fundraise_position import FundraisePositions
 from .indexer_state import IndexerState
@@ -10,6 +11,7 @@ from .stats_apy import StatsAPY
 from .stats_tvc import StatsTVC
 from .stats_tvl import StatsTVL
 from .claim import Claim
+from .claim_status import ClaimStatus
 
 __all__ = [
     Base,
@@ -25,5 +27,6 @@ __all__ = [
     StatsTVC,
     ProtocolCoverage,
     StatsAPY,
-    Claim
+    Claim,
+    ClaimStatus
 ]

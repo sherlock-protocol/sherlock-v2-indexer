@@ -7,6 +7,7 @@ from sqlalchemy import Column, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
 
 from models.base import Base
+from models.claim_status import ClaimStatus
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +22,6 @@ class Claim(Base):
     exploit_started_at = Column(TIMESTAMP, nullable=True)
     amount = Column(NUMERIC(78), nullable=False)
     resources_link = Column(Text, nullable=True)
-    status = Column(Integer, default=0)
-    status_updated_at = Column(TIMESTAMP, nullable=False)
     timestamp = Column(TIMESTAMP, nullable=False)
 
     @staticmethod
@@ -39,29 +38,19 @@ class Claim(Base):
         claim.amount = amount
         claim.resources_link = resources_link
         claim.exploit_started_at = exploit_started_at
-        claim.status = 0
-        claim.status_updated_at = created_at
         claim.timestamp = created_at
 
         session.add(claim)
 
     @staticmethod
-    def update_status(session, id, status, timestamp):
-        logger.info("Updating claim %s to status: %s", id, status)
-
-        claim = session.query(Claim).get(id)
-
-        if not claim:
-            logger.info("Claim with id %s not found!", id)
-            return
-
-        claim.status = status
-        claim.status_updated_at = datetime.fromtimestamp(timestamp)
-
-    @staticmethod
     def get_active_claim_by_protocol(session, protocol_id):
-        claim = session.query(Claim).filter_by(protocol_id=protocol_id).filter(
-            Claim.status > 0).one_or_none()
+        claim = (
+            session.query(Claim)
+            .filter_by(protocol_id=protocol_id)
+            .join(ClaimStatus, Claim.id == ClaimStatus.claim_id)
+            .filter(ClaimStatus.status > 0)
+            .one_or_none()
+        )
         return claim
 
     def to_dict(self):
@@ -71,7 +60,7 @@ class Claim(Base):
         d = {}
         for column in self.__table__.columns:
             data = getattr(self, column.name)
-            if column.name in ["exploit_started_at", "status_updated_at", "timestamp"] and data is not None:
+            if column.name in ["exploit_started_at", "timestamp"] and data is not None:
                 d[column.name] = int(data.timestamp())
                 continue
             d[column.name] = data

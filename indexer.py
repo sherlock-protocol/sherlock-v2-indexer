@@ -9,7 +9,6 @@ from timeit import default_timer as timer
 
 from sqlalchemy.exc import IntegrityError
 from web3.constants import ADDRESS_ZERO
-from models.claim import Claim
 
 import settings
 from models import (
@@ -24,6 +23,8 @@ from models import (
     StatsAPY,
     StatsTVC,
     StatsTVL,
+    Claim,
+    ClaimStatus
 )
 from utils import get_event_logs_in_range, requests_retry_session, time_delta_apy
 
@@ -353,7 +354,7 @@ class Indexer:
             new_status = args["currentState"]
             timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
-            Claim.update_status(session, claim_id, new_status, timestamp)
+            ClaimStatus.insert(session, claim_id, new_status, timestamp)
 
             return
 
