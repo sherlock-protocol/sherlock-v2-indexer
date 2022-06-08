@@ -5,6 +5,7 @@ from datetime import datetime
 
 from sqlalchemy import Column, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
+from sqlalchemy.sql.expression import and_, or_, alias
 
 from models.base import Base
 from models.claim_status import ClaimStatus
@@ -44,11 +45,23 @@ class Claim(Base):
 
     @staticmethod
     def get_active_claim_by_protocol(session, protocol_id):
+        cs = alias(ClaimStatus)
+        cs2 = alias(ClaimStatus)
         claim = (
             session.query(Claim)
             .filter_by(protocol_id=protocol_id)
-            .join(ClaimStatus, Claim.id == ClaimStatus.claim_id)
-            .filter(ClaimStatus.status > 0)
+            .join(cs, Claim.id == cs.c.claim_id)
+            .outerjoin(cs2, and_(
+                Claim.id == cs2.c.claim_id,
+                or_(
+                    cs.c.timestamp < cs2.c.timestamp,
+                    and_(
+                        cs.c.timestamp == cs2.c.timestamp,
+                        cs.c.id < cs2.c.id
+                    )
+                )
+            ))
+            .where(and_(cs2.c.id == None, cs.c.status > 0))
             .one_or_none()
         )
         return claim
