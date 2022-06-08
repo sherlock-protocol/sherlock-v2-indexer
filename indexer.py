@@ -163,7 +163,7 @@ class Indexer:
             block: Current block
         """
         timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
-        apy = indx.apy
+        apy = indx.apy + indx.additional_apy
 
         StatsAPY.insert(session, block, timestamp, apy)
 
