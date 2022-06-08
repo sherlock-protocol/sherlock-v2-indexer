@@ -173,8 +173,6 @@ class TrueFiYield(CustomYield):
             % self.pool_address,
         ).json()["data"]["loans"]
 
-        print(res)
-
         return [(int(item["amount"]), int(item["APY"]) / 10000) for item in res]
 
     def get_apy(self, block: int, timestamp: int) -> Optional[float]:
