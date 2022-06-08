@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 from web3.contract import Contract
+from web3.exceptions import BadFunctionCallOutput
 
 from settings import STRATEGY_ABI, WEB3_WSS
 
@@ -44,6 +45,13 @@ class Strategy:
             logger.info("%s balance is %s" % (self, balance))
 
             return balance
+        except BadFunctionCallOutput as e:
+            # Skip logging the entire stack as an error, when the exception is related
+            # to the strategy contract not being deployed yet.
+            logger.debug(e, exc_info=True)
+            logger.debug("%s is not yet deployed." % self)
+
+            return None
         except Exception as e:
             logger.exception(e)
             return None
