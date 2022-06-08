@@ -61,7 +61,7 @@ class MapleYield(CustomYield):
             )
 
             res = r.post(
-                "https://staging.api.maple.finance/v1/graphql",
+                "https://api.maple.finance/v1/graphql",
                 r"""
                 {
                     "query":"query PoolData {  results: pool(contractAddress: \"%s\") {\n    lendingApy\n  }\n}\n",
