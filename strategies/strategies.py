@@ -65,3 +65,19 @@ class Strategies:
     MAPLE = Strategy(address="0xfa01268bd200d0D0f13A6F9758Ba3C09F928E2f7", name="Maple")
 
     ALL = [AAVE, COMPOUND, EULER, TRUEFI, MAPLE]
+
+    @classmethod
+    def get(self, address):
+        """Fetch a strategy by its address.j
+
+        Args:
+            address (_type_): Strategy address
+
+        Returns:
+            Strategy: Strategy instance
+        """
+        for item in self.ALL:
+            if item.address == address:
+                return item
+
+        return None

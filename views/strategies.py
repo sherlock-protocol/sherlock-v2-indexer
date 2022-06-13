@@ -1,5 +1,6 @@
 from flask_app import app
 from models import Session, StrategyBalance
+from strategies.strategies import Strategies
 
 
 @app.route("/strategies")
@@ -13,9 +14,10 @@ def strategies():
         )
 
     # Transform rows in list of dictionaries
-    strategies = [x.to_dict() for x in strategies]
+    data = []
+    for strategy in strategies:
+        strat_obj = Strategies.get(strategy.address)
 
-    return {
-        "ok": True,
-        "data": strategies,
-    }
+        data.append({**strategy.to_dict(), "name": strat_obj.name if strat_obj else "Unknown"})
+
+    return {"ok": True, "data": data}
