@@ -154,3 +154,4 @@ logger.addHandler(debug_file_handler)
 # SENTRY
 # ------------------------------------------------------------------------------
 SENTRY_DSN = config("SENTRY_DSN")
+SENTRY_ENVIRONMENT = config("SENTRY_ENVIRONMENT")
