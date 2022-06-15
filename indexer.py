@@ -81,7 +81,7 @@ class Indexer:
             self.index_apy: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             # 268 blocks is roughly every hour on current Ethereum mainnet
             self.reset_apy_calc: 268,
-            self.index_strategy_balances: 268 * 6,  # 6 hours
+            self.index_strategy_balances: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.calc_additional_apy: 268 * 6,  # 6 hours
         }
 
