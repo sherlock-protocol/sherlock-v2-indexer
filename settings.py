@@ -150,3 +150,7 @@ logger.handlers = []
 logger.addHandler(console_handler)
 logger.addHandler(file_handler)
 logger.addHandler(debug_file_handler)
+
+# SENTRY
+# ------------------------------------------------------------------------------
+SENTRY_DSN = config("SENTRY_DSN")
