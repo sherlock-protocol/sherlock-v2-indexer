@@ -8,6 +8,7 @@ from timeit import default_timer as timer
 from sqlalchemy.exc import IntegrityError
 from web3.constants import ADDRESS_ZERO
 
+import sentry
 import settings
 from models import (
     FundraisePositions,
@@ -140,17 +141,31 @@ class Indexer:
 
         if apy < 0:
             logger.warning("APY %s is being skipped because is negative." % apy)
+            sentry.report_message(
+                "APY is being skipped because it is negative!",
+                "warning",
+                {"current_apy": float(apy * 100)},
+            )
             return
 
-        if apy > 0.5:
-            logger.warning("APY %s is being skipped because is bigger than 50%%." % apy)
+        if apy > 0.15:
+            logger.warning("APY %s is being skipped because is higher than 15%%." % apy)
+            sentry.report_message(
+                "APY is being skipped because it higher than 15%!",
+                "warning",
+                {"current_apy": float(apy * 100)},
+            )
             return
 
-        # if indx.apy != 0 and apy > indx.apy * 2:
-        #     logger.warning(
-        #         "APY %s is being skipped because it is bigger than 2 times the old APY of %s" % (apy, indx.apy)
-        #     )
-        #     return
+        if indx.apy != 0 and apy > indx.apy * 2:
+            logger.warning(
+                "APY %s is being skipped because it is 2 times higher than the previous APY of %s" % (apy, indx.apy)
+            )
+            sentry.report_message(
+                "APY is 2 times higher than the previous APY!",
+                "warning",
+                {"current_apy": float(apy * 100), "previous_apy": float(indx.apy * 100)},
+            )
 
         indx.apy = apy
 
