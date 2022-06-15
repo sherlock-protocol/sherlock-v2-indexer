@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from web3.constants import ADDRESS_ZERO
 from web3.exceptions import ContractLogicError
 
+import sentry
 import settings
 from models import (
     Claim,
