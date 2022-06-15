@@ -5,6 +5,7 @@ import settings
 
 sentry_sdk.init(
     dsn=settings.SENTRY_DSN,
+    environment=settings.SENTRY_ENVIRONMENT,
     integrations=[
         FlaskIntegration(),
     ],
