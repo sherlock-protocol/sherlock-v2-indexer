@@ -1,11 +1,9 @@
-import logging
 import json
-
+import logging
 from datetime import datetime
 
-from sqlalchemy import Column, ForeignKey, Integer, Text
+from sqlalchemy import Column, ForeignKey, Integer, Text, desc, select
 from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
-from sqlalchemy.sql.expression import and_, or_, alias
 
 from models.base import Base
 from models.claim_status import ClaimStatus
@@ -26,7 +24,17 @@ class Claim(Base):
     timestamp = Column(TIMESTAMP, nullable=False)
 
     @staticmethod
-    def insert(session, id, protocol_id, initiator, receiver, amount, resources_link, exploit_started_at_timestamp, created_at_timestamp):
+    def insert(
+        session,
+        id,
+        protocol_id,
+        initiator,
+        receiver,
+        amount,
+        resources_link,
+        exploit_started_at_timestamp,
+        created_at_timestamp,
+    ):
         logger.info("Creating claim for protocol %s in amount of %s", protocol_id, amount)
         exploit_started_at = datetime.fromtimestamp(exploit_started_at_timestamp)
         created_at = datetime.fromtimestamp(created_at_timestamp)
@@ -45,26 +53,23 @@ class Claim(Base):
 
     @staticmethod
     def get_active_claim_by_protocol(session, protocol_id):
-        cs = alias(ClaimStatus)
-        cs2 = alias(ClaimStatus)
-        claim = (
-            session.query(Claim)
-            .filter_by(protocol_id=protocol_id)
-            .join(cs, Claim.id == cs.c.claim_id)
-            .outerjoin(cs2, and_(
-                Claim.id == cs2.c.claim_id,
-                or_(
-                    cs.c.timestamp < cs2.c.timestamp,
-                    and_(
-                        cs.c.timestamp == cs2.c.timestamp,
-                        cs.c.id < cs2.c.id
-                    )
-                )
-            ))
-            .where(and_(cs2.c.id == None, cs.c.status > 0))
-            .one_or_none()
+        subquery = (
+            select(Claim, ClaimStatus)
+            .where(Claim.id == ClaimStatus.claim_id)
+            .where(Claim.protocol_id == protocol_id)
+            .order_by(desc(Claim.id), desc(ClaimStatus.id))
+            .limit(1)
+            .subquery()
         )
-        return claim
+
+        query = select(Claim).where(subquery.c.status != 0)
+
+        claim = session.execute(query).first()
+
+        if not claim:
+            return None
+
+        return claim[0]
 
     def to_dict(self):
         """Converts object to dict.
