@@ -1,9 +1,10 @@
-import logging
 import json
+import logging
 from datetime import datetime
-from time import time
-from sqlalchemy import Column, ForeignKey, Integer, Text
-from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
+from enum import Enum
+
+from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy.dialects.postgresql import TIMESTAMP
 
 from models.base import Base
 
@@ -13,9 +14,35 @@ logger = logging.getLogger(__name__)
 class ClaimStatus(Base):
     __tablename__ = "claim_status"
 
+    class Status(Enum):
+        # Claim doesn't exist (this is the default state on creation)
+        NonExistent = 0
+        # Claim is created, SPCC is able to set state to valid
+        SpccPending = 1
+        # Final state, claim is valid
+        SpccApproved = 2
+        # Claim denied by SPCC, claim can be escalated within 4 weeks
+        SpccDenied = 3
+        # Price is proposed but not escalated
+        UmaPriceProposed = 4
+        # Price is proposed, callback received, ready to submit dispute
+        ReadyToProposeUmaDispute = 5
+        # Escalation is done, waiting for confirmation
+        UmaDisputeProposed = 6
+        # Claim is escalated, in case Spcc denied or didn't act within 7 days.
+        UmaPending = 7
+        # Final state, claim is valid, claim can be enacted after 1 day, umaHaltOperator has 1 day to change to denied
+        UmaApproved = 8
+        # Final state, claim is invalid
+        UmaDenied = 9
+        # UMAHO can halt claim if state is UmaApproved
+        Halted = 10
+        # Claim is removed by protocol agent
+        Cleaned = 11
+
     id = Column(Integer, primary_key=True)
     claim_id = Column(Integer, ForeignKey("claims.id"), nullable=False)
-    status = Column(Integer, default=0)
+    status = Column(Integer, default=Status.NonExistent)
     timestamp = Column(TIMESTAMP, nullable=False)
 
     @staticmethod

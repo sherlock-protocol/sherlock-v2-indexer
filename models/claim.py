@@ -62,7 +62,7 @@ class Claim(Base):
             .subquery()
         )
 
-        query = select(Claim).where(subquery.c.status != 0)
+        query = select(Claim).where(subquery.c.status != ClaimStatus.Status.NonExistent.value)
 
         claim = session.execute(query).first()
 
