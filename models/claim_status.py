@@ -37,6 +37,8 @@ class ClaimStatus(Base):
         Halted = 10
         # Claim is removed by protocol agent
         Cleaned = 11
+        # Protocol agent executed the payout
+        PaidOut = 12
 
     id = Column(Integer, primary_key=True)
     claim_id = Column(Integer, ForeignKey("claims.id"), nullable=False)

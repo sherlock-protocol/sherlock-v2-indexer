@@ -76,6 +76,7 @@ class Indexer:
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimCreated: self.ClaimCreated.new,
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimStatusChanged: self.ClaimStatusChanged.new,
+            settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimPayout: self.ClaimPayout.new,
         }
         self.intervals = {
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
@@ -392,6 +393,13 @@ class Indexer:
             timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
             ClaimStatus.insert(session, claim_id, new_status, tx_hash, timestamp)
+
+    class ClaimPayout:
+        def new(self, session, indx, block, tx_hash, args):
+            claim_id = args["claimID"]
+            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+
+            ClaimStatus.insert(session, claim_id, ClaimStatus.Status.PaidOut.value, tx_hash, timestamp)
 
     def start(self):
         # get last block indexed from database
