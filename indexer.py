@@ -76,7 +76,6 @@ class Indexer:
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimCreated: self.ClaimCreated.new,
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimStatusChanged: self.ClaimStatusChanged.new,
-            settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimPayout: self.ClaimPayout.new,
         }
         self.intervals = {
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
@@ -390,10 +389,6 @@ class Indexer:
 
             ClaimStatus.insert(session, claim_id, new_status, tx_hash, timestamp)
 
-            return
-
-    class ClaimPayout:
-        def new(self, session, indx, block, tx_hash, args):
             return
 
     def start(self):
