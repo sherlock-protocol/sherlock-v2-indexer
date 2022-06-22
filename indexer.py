@@ -13,7 +13,6 @@ from web3.constants import ADDRESS_ZERO
 import settings
 from models import (
     Claim,
-    ClaimPayout,
     ClaimStatus,
     FundraisePositions,
     IndexerState,
@@ -395,11 +394,6 @@ class Indexer:
 
     class ClaimPayout:
         def new(self, session, indx, block, tx_hash, args):
-            claim_id = args["claimID"]
-            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
-
-            ClaimPayout.insert(session, claim_id, tx_hash, timestamp)
-
             return
 
     def start(self):
