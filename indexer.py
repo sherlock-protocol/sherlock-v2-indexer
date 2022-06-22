@@ -379,17 +379,19 @@ class Indexer:
                 exploit_started_at,
                 created,
             )
-            return
 
     class ClaimStatusChanged:
         def new(self, session, indx, block, tx_hash, args):
             claim_id = args["claimID"]
             new_status = args["currentState"]
+
+            if new_status == 0:
+                logger.info("Claim status is NonExistent. Won't index it.")
+                return
+
             timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
             ClaimStatus.insert(session, claim_id, new_status, tx_hash, timestamp)
-
-            return
 
     def start(self):
         # get last block indexed from database

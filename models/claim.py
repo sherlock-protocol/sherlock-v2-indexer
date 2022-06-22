@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import datetime
 
-from sqlalchemy import Column, ForeignKey, Integer, Text, desc, select
+from sqlalchemy import Column, ForeignKey, Integer, Text, desc
 from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
 
 from models.base import Base
@@ -53,23 +53,16 @@ class Claim(Base):
 
     @staticmethod
     def get_active_claim_by_protocol(session, protocol_id):
-        subquery = (
-            select(Claim, ClaimStatus)
-            .where(Claim.id == ClaimStatus.claim_id)
+        claim = (
+            session.query(Claim)
+            .join(ClaimStatus, Claim.id == ClaimStatus.claim_id)
             .where(Claim.protocol_id == protocol_id)
             .order_by(desc(Claim.id), desc(ClaimStatus.id))
             .limit(1)
-            .subquery()
+            .one_or_none()
         )
 
-        query = select(Claim).where(subquery.c.status != ClaimStatus.Status.NonExistent.value)
-
-        claim = session.execute(query).first()
-
-        if not claim:
-            return None
-
-        return claim[0]
+        return claim
 
     def to_dict(self):
         """Converts object to dict.

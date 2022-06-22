@@ -15,8 +15,6 @@ class ClaimStatus(Base):
     __tablename__ = "claim_status"
 
     class Status(Enum):
-        # Claim doesn't exist (this is the default state on creation)
-        NonExistent = 0
         # Claim is created, SPCC is able to set state to valid
         SpccPending = 1
         # Final state, claim is valid
@@ -42,7 +40,7 @@ class ClaimStatus(Base):
 
     id = Column(Integer, primary_key=True)
     claim_id = Column(Integer, ForeignKey("claims.id"), nullable=False)
-    status = Column(Integer, default=Status.NonExistent)
+    status = Column(Integer, nullable=False)
     tx_hash = Column(Text, nullable=False)
     timestamp = Column(TIMESTAMP, nullable=False)
 
