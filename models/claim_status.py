@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy import Column, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 
 from models.base import Base
@@ -43,13 +43,15 @@ class ClaimStatus(Base):
     id = Column(Integer, primary_key=True)
     claim_id = Column(Integer, ForeignKey("claims.id"), nullable=False)
     status = Column(Integer, default=Status.NonExistent)
+    tx_hash = Column(Text, nullable=False)
     timestamp = Column(TIMESTAMP, nullable=False)
 
     @staticmethod
-    def insert(session, claim_id, status, timestamp):
+    def insert(session, claim_id, status, tx_hash, timestamp):
         claim_status = ClaimStatus()
         claim_status.claim_id = claim_id
         claim_status.status = status
+        claim_status.tx_hash = tx_hash
         claim_status.timestamp = datetime.fromtimestamp(timestamp)
 
         session.add(claim_status)

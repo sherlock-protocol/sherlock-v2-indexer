@@ -5,14 +5,14 @@ Revises: c601bcc5e1bb
 Create Date: 2022-06-07 20:10:11.148525
 
 """
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = '7bf4a02edfba'
-down_revision = 'c601bcc5e1bb'
+revision = "7bf4a02edfba"
+down_revision = "c601bcc5e1bb"
 branch_labels = None
 depends_on = None
 
@@ -23,13 +23,11 @@ def upgrade():
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("claim_id", sa.Integer(), nullable=False),
         sa.Column("status", sa.Integer(), default=0),
+        sa.Column("tx_hash", sa.Text(), nullable=False),
         sa.Column("timestamp", postgresql.TIMESTAMP(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     ),
-    sa.ForeignKeyConstraint(
-        ["claim_id"],
-        ["claims.id"]
-    ),
+    sa.ForeignKeyConstraint(["claim_id"], ["claims.id"]),
 
 
 def downgrade():
