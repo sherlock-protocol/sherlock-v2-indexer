@@ -351,6 +351,7 @@ class Indexer:
             protocol = Protocol.get(session, protocol_bytes_id)
 
             if not protocol:
+                logger.error("Can't index claim. Protocol %s not found", protocol_bytes_id)
                 return
 
             (
