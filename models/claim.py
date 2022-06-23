@@ -58,7 +58,7 @@ class Claim(Base):
             .join(ClaimStatus, Claim.id == ClaimStatus.claim_id)
             .where(Claim.protocol_id == protocol_id)
             .order_by(desc(Claim.id), desc(ClaimStatus.id))
-            .one_or_none()
+            .first()
         )
 
         return claim
