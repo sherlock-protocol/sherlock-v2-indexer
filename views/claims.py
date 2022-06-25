@@ -8,9 +8,9 @@ def active_claims(protocol):
     with Session() as s:
         claim = Claim.get_active_claim_by_protocol(s, protocol)
 
-    if claim is None:
-        return {"ok": True, "data": None}
+        if claim is None:
+            return {"ok": True, "data": None}
 
-    claim_status = ClaimStatus.get_claim_status(s, claim.id)
+        claim_status = ClaimStatus.get_claim_status(s, claim.id)
 
     return {"ok": True, "data": {**claim.to_dict(), "status": [{**status.to_dict()} for status in claim_status]}}
