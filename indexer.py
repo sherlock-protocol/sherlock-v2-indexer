@@ -33,11 +33,6 @@ logger = logging.getLogger(__name__)
 class Indexer:
     blocks_per_call = settings.INDEXER_BLOCKS_PER_CALL
 
-    hardcoded_tvls = {
-        # LiquiFi
-        "0x69f4668c272ce31fadcd9c3baa18d332f7b51237a757c2a883b7c95c84d204e3": 500_000
-    }
-
     def __init__(self, blocks_per_call=None):
         if blocks_per_call:
             self.blocks_per_call = blocks_per_call
@@ -176,10 +171,9 @@ class Indexer:
                 protocol_coverage = protocol_coverages[0]
 
                 # If the TVL is hardcoded, we take the value and avoid calling DefiLlama
-                hardcoded_tvl = self.hardcoded_tvls.get(protocol.bytes_identifier)
-                if hardcoded_tvl:
-                    protocol_tvl = hardcoded_tvl * (10**6)
-                else:
+                if row.get("hardcoded_tvl"):
+                    protocol_tvl = int(row["hardcoded_tvl"] * (10**6))
+                elif row.get("defi_llama_slug"):
                     # fetch protocol's TVL from DefiLlama
                     response = requests.get("https://api.llama.fi/protocol/" + row["defi_llama_slug"])
                     data = response.json()
@@ -191,6 +185,9 @@ class Indexer:
                             break
 
                 if not protocol_tvl:
+                    logger.warning(
+                        "Could nog register TVL for protocol %s" % row["tag"]
+                    )
                     continue
 
                 # Update protocol's TVL
