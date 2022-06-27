@@ -177,17 +177,20 @@ class Indexer:
                     # fetch protocol's TVL from DefiLlama
                     response = requests.get("https://api.llama.fi/protocol/" + row["defi_llama_slug"])
                     data = response.json()
-                    tvl_historical_data = data["chainTvls"]["Ethereum"]["tvl"]
 
-                    for tvl_data_point in reversed(tvl_historical_data):
-                        if tvl_data_point["date"] < int(timestamp):
-                            protocol_tvl = tvl_data_point["totalLiquidityUSD"] * (10**6)
-                            break
+                    networks = row["networks"].split(",")
+                    protocol_tvl = 0
+                    for network in networks:
+                        if network in data["chainTvls"]:
+                            tvl_historical_data = data["chainTvls"][network]["tvl"]
+
+                            for tvl_data_point in reversed(tvl_historical_data):
+                                if tvl_data_point["date"] < int(timestamp):
+                                    protocol_tvl += tvl_data_point["totalLiquidityUSD"] * (10**6)
+                                    break
 
                 if not protocol_tvl:
-                    logger.warning(
-                        "Could nog register TVL for protocol %s" % row["tag"]
-                    )
+                    logger.warning("Could nog register TVL for protocol %s" % row["tag"])
                     continue
 
                 # Update protocol's TVL
