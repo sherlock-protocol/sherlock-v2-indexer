@@ -172,7 +172,7 @@ class Indexer:
 
                 # If the TVL is hardcoded, we take the value and avoid calling DefiLlama
                 if row.get("hardcoded_tvl"):
-                    protocol_tvl = int(row["hardcoded_tvl"] * (10**6))
+                    protocol_tvl = int(float(row["hardcoded_tvl"].replace(",", "")) * (10**6))
                 elif row.get("defi_llama_slug"):
                     # fetch protocol's TVL from DefiLlama
                     response = requests.get("https://api.llama.fi/protocol/" + row["defi_llama_slug"])
