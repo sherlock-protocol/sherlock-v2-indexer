@@ -14,9 +14,10 @@ def get_protocols():
                 ProtocolPremium.protocol_id,
                 ProtocolPremium.premium_set_at.desc(),
             )
+            .all()
         )
 
-        premiums, protocols = zip(*protocols)
+        premiums, protocols = zip(*protocols) if len(protocols) > 0 else ((), ())
         coverages = [ProtocolCoverage.get_protocol_coverages(s, protocol.id) for protocol in protocols]
 
     return {
