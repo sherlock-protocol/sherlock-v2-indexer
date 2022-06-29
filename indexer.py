@@ -1,4 +1,6 @@
+import codecs
 import logging
+import shlex
 import threading
 import time
 from datetime import datetime, timedelta
@@ -10,6 +12,8 @@ from web3.constants import ADDRESS_ZERO
 
 import settings
 from models import (
+    Claim,
+    ClaimStatus,
     FundraisePositions,
     IndexerState,
     Protocol,
@@ -65,6 +69,9 @@ class Indexer:
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolPremiumChanged: self.ProtocolPremiumChanged.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemoved: self.ProtocolRemoved.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
+            settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimCreated: self.ClaimCreated.new,
+            settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimStatusChanged: self.ClaimStatusChanged.new,
+            settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimPayout: self.ClaimPayout.new,
         }
         self.intervals = {
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
@@ -240,7 +247,7 @@ class Indexer:
         indx.balance_factor = Decimal(1)
 
     class Transfer:
-        def new(self, session, indx, block, args):
+        def new(self, session, indx, block, tx_hash, args):
             if args["to"] == ADDRESS_ZERO:
                 StakingPositions.delete(session, args["tokenId"])
                 return
@@ -265,7 +272,7 @@ class Indexer:
             )
 
     class Purchase:
-        def new(self, session, indx, block, args):
+        def new(self, session, indx, block, tx_hash, args):
             position = FundraisePositions.get(session, args["buyer"])
             if position is None:
                 FundraisePositions.insert(
@@ -282,20 +289,20 @@ class Indexer:
                 position.reward += args["amount"]
 
     class ProtocolAdded:
-        def new(self, session, indx, block, args):
+        def new(self, session, indx, block, tx_hash, args):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
 
             Protocol.insert(session, protocol_bytes_id)
 
     class ProtocolAgentTransfer:
-        def new(self, session, indx, block, args):
+        def new(self, session, indx, block, tx_hash, args):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             new_agent = args["to"]
 
             Protocol.update_agent(session, protocol_bytes_id, new_agent)
 
     class ProtocolPremiumChanged:
-        def new(self, session, indx, block, args):
+        def new(self, session, indx, block, tx_hash, args):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             new_premium = args["newPremium"]
 
@@ -308,14 +315,14 @@ class Indexer:
             ProtocolPremium.insert(session, protocol.id, new_premium, timestamp)
 
     class ProtocolRemoved:
-        def new(self, session, indx, block, args):
+        def new(self, session, indx, block, tx_hash, args):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
             Protocol.remove(session, protocol_bytes_id, timestamp)
 
     class Restaked:
-        def new(self, session, indx, block, args):
+        def new(self, session, indx, block, tx_hash, args):
             token_id = args["tokenID"]
 
             # Update all database entries to be up to date with block
@@ -325,7 +332,7 @@ class Indexer:
             StakingPositions.restake(session, block, token_id)
 
     class ProtocolUpdated:
-        def new(self, session, indx, block, args):
+        def new(self, session, indx, block, tx_hash, args):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             coverage_amount = args["coverageAmount"]
 
@@ -336,6 +343,63 @@ class Indexer:
             timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
             ProtocolCoverage.update(session, protocol.id, coverage_amount, timestamp)
+
+    class ClaimCreated:
+        def new(self, session, indx, block, tx_hash, args):
+            protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
+            protocol = Protocol.get(session, protocol_bytes_id)
+
+            if not protocol:
+                return
+
+            (
+                created,
+                _,
+                initiator,
+                _,
+                _,
+                receiver,
+                exploit_started_at,
+                _,
+                ancillary_data,
+            ) = settings.SHERLOCK_CLAIM_MANAGER_WSS.functions.claim(args["claimID"]).call(block_identifier=block)
+
+            lexer = shlex.shlex(codecs.decode(ancillary_data, "UTF-8"), posix=True)
+            lexer.whitespace_split = True
+            lexer.whitespace = ","
+            ancillary_data_dict = dict(pair.split(":", 1) for pair in lexer)
+
+            Claim.insert(
+                session,
+                args["claimID"],
+                protocol.id,
+                initiator,
+                receiver,
+                args["amount"],
+                ancillary_data_dict.get("Resources"),
+                exploit_started_at,
+                created,
+            )
+
+    class ClaimStatusChanged:
+        def new(self, session, indx, block, tx_hash, args):
+            claim_id = args["claimID"]
+            new_status = args["currentState"]
+
+            if new_status == 0:
+                logger.info("Claim status is NonExistent. Won't index it.")
+                return
+
+            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+
+            ClaimStatus.insert(session, claim_id, new_status, tx_hash, timestamp)
+
+    class ClaimPayout:
+        def new(self, session, indx, block, tx_hash, args):
+            claim_id = args["claimID"]
+            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+
+            ClaimStatus.insert(session, claim_id, ClaimStatus.Status.PaidOut.value, tx_hash, timestamp)
 
     def start(self):
         # get last block indexed from database
@@ -458,7 +522,7 @@ class Indexer:
                 logger.info("Processing %s event - Args: %s", entry["event"], entry["args"].__dict__)
 
                 try:
-                    func(self, session, indx, entry["blockNumber"], entry["args"])
+                    func(self, session, indx, entry["blockNumber"], entry["transactionHash"].hex(), entry["args"])
                     session.commit()
                 except IntegrityError as e:
                     logger.exception(e)

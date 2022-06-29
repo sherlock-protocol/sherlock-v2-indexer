@@ -68,6 +68,7 @@ class Protocol(Base):
 
     def to_dict(self):
         return {
+            "id": self.id,
             "bytes_identifier": self.bytes_identifier,
             "agent": self.agent,
             "coverage_ended_at": int(self.coverage_ended_at.timestamp()) if self.coverage_ended_at else None,
