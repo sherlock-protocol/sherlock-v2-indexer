@@ -406,6 +406,9 @@ class Indexer:
             except Exception as e:
                 logger.exception(e)
                 time.sleep(settings.INDEXER_SLEEP_BETWEEN_CALL)
+            finally:
+                # Return connection to the connection pool
+                s.close()
 
     def index_intervals(self, session, indx, block):
         logger.info("Running interval indexing functions")
