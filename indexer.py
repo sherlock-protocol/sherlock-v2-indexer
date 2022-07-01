@@ -196,7 +196,7 @@ class Indexer:
                             tvl_historical_data = data["chainTvls"][network]["tvl"]
 
                             for tvl_data_point in reversed(tvl_historical_data):
-                                if tvl_data_point["date"] < int(timestamp):
+                                if tvl_data_point["date"] < timestamp:
                                     protocol_tvl += tvl_data_point["totalLiquidityUSD"] * (10**6)
                                     break
 
