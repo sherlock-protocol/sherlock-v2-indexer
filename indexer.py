@@ -177,30 +177,35 @@ class Indexer:
 
                 protocol_coverage = protocol_coverages[0]
 
+                protocol_tvl = 0
                 # If the TVL is hardcoded, we take the value and avoid calling DefiLlama
-                if row.get("hardcoded_tvl"):
-                    protocol_tvl = int(float(row["hardcoded_tvl"].replace(",", "")) * (10**6))
+                if row["id"] in settings.HARDCODED_TVL_PROTOCOLS:
+                    # Find the TVL at current block (or the first existing block before current block)
+                    for entry in settings.HARDCODED_TVL_PROTOCOLS[row["id"]]:
+                        if entry["timestamp"] <= timestamp:
+                            protocol_tvl = entry["value"]
+                            break
                 elif row.get("defi_llama_slug"):
                     # fetch protocol's TVL from DefiLlama
                     response = requests.get("https://api.llama.fi/protocol/" + row["defi_llama_slug"])
                     data = response.json()
 
                     networks = row["networks"].split(",")
-                    protocol_tvl = 0
                     for network in networks:
                         if network in data["chainTvls"]:
                             tvl_historical_data = data["chainTvls"][network]["tvl"]
 
                             for tvl_data_point in reversed(tvl_historical_data):
-                                if tvl_data_point["date"] < int(timestamp):
+                                if tvl_data_point["date"] < timestamp:
                                     protocol_tvl += tvl_data_point["totalLiquidityUSD"] * (10**6)
                                     break
 
                 if not protocol_tvl:
-                    logger.warning("Could nog register TVL for protocol %s" % row["tag"])
+                    logger.warning("Could not register TVL for protocol %s" % row["tag"])
                     continue
 
                 # Update protocol's TVL
+                logger.info("%s TVL is: %s", row["name"], protocol_tvl)
                 protocol.tvl = protocol_tvl
 
                 # if protocol's TVL < coverage_amount => TVC = TVL, otherwise TVC = coverage_amount

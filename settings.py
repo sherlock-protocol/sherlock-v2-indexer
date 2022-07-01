@@ -60,9 +60,7 @@ SHERLOCK_PROTOCOL_MANAGER_WSS = WEB3_WSS.eth.contract(
 
 SHERLOCK_CLAIM_MANAGER_ADDRESS = config("SHERLOCK_V2_CLAIM_MANAGER")
 with open(
-    os.path.join(
-        REPO, "artifacts", "contracts", "managers", "SherlockClaimManager.sol", "SherlockClaimManager.json"
-    )
+    os.path.join(REPO, "artifacts", "contracts", "managers", "SherlockClaimManager.sol", "SherlockClaimManager.json")
 ) as json_data:
     SHERLOCK_CLAIM_MANAGER_ABI = json.load(json_data)["abi"]
 SHERLOCK_CLAIM_MANAGER_WSS = WEB3_WSS.eth.contract(
@@ -81,6 +79,35 @@ LAST_POSITION_ID_FOR_15PERC_APY = config("LAST_POSITION_ID_FOR_15PERC_APY", cast
 # Protocols (from local csv file, kept in memory)
 with open("./meta/protocols.csv", newline="") as csv_file:
     PROTOCOLS_CSV = list(csv.DictReader(csv_file))
+
+# Protocols TVL history
+with open("./meta/tvl_history.csv", newline="") as csv_file:
+    TVL_HISTORY_CSV = list(csv.DictReader(csv_file))
+
+    # Parse timestamps as ints
+    TVL_HISTORY_CSV = [{**entry, "timestamp": int(entry["timestamp"])} for entry in TVL_HISTORY_CSV]
+
+    # Sort descending by timestamp all entries
+    TVL_HISTORY_CSV = sorted(TVL_HISTORY_CSV, key=lambda x: x["timestamp"], reverse=True)
+
+    # Process the CSV into a dict with the following structure
+    # {
+    #   "PROTOCOL_ID": [
+    #    {
+    #      'timestamp': 1234567,
+    #      'value': 500_000
+    #    },
+    #    {
+    #      'timestamp': 1234568,
+    #      'value': 525_000
+    #    }
+    #   ]
+    # }
+    HARDCODED_TVL_PROTOCOLS = {}
+    for entry in TVL_HISTORY_CSV:
+        HARDCODED_TVL_PROTOCOLS.setdefault(entry["id"], []).append(
+            {"timestamp": int(entry["timestamp"]), "value": int(float(entry["tvl"].replace(",", "")) * (10**6))}
+        )
 
 # LOGGING
 # ------------------------------------------------------------------------------
