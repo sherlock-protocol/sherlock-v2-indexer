@@ -1,10 +1,11 @@
 import logging
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, Text, text
+from sqlalchemy import Column, Integer, Text, func
 from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
 
 from models.base import Base
+from models.protocol_premium import ProtocolPremium
 
 logger = logging.getLogger(__name__)
 
@@ -69,22 +70,13 @@ class Protocol(Base):
     @staticmethod
     def get_sum_of_premiums(session):
         # Sums up the latest premium of each protocol.
-        sql = text(
-            """
-            SELECT SUM(pc.premium) premiums
-            FROM protocols_premiums pc
-            INNER JOIN (
-                SELECT p.id, MAX(pc.premium_set_at) timestamp
-                FROM protocols p
-                JOIN protocols_premiums pc ON pc.protocol_id = p.id
-                WHERE p.coverage_ended_at IS NULL
-                GROUP BY p.id
-            ) max ON max.id = pc.protocol_id AND max.timestamp = pc.premium_set_at"""
-        )
-
-        result = session.execute(sql).first()
-
-        return result["premiums"]
+        session.query(func.sum(ProtocolPremium.premium)).filter(
+            ProtocolPremium.id.in_(
+                session.query(ProtocolPremium.id)
+                .distinct(ProtocolPremium.protocol_id)
+                .order_by(ProtocolPremium.protocol_id, ProtocolPremium.premium_set_at.desc())
+            )
+        ).scalar()
 
     def to_dict(self):
         return {
