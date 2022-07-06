@@ -1,5 +1,6 @@
-from models.claim_status import ClaimStatus
 from .base import Base, Session, engine
+from .claim import Claim
+from .claim_status import ClaimStatus
 from .fundraise_position import FundraisePositions
 from .indexer_state import IndexerState
 from .protocol import Protocol
@@ -10,8 +11,7 @@ from .staking_positions_meta import StakingPositionsMeta
 from .stats_apy import StatsAPY
 from .stats_tvc import StatsTVC
 from .stats_tvl import StatsTVL
-from .claim import Claim
-from .claim_status import ClaimStatus
+from .strategy_balance import StrategyBalance
 
 __all__ = [
     Base,
@@ -28,5 +28,6 @@ __all__ = [
     ProtocolCoverage,
     StatsAPY,
     Claim,
-    ClaimStatus
+    ClaimStatus,
+    StrategyBalance,
 ]
