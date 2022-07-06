@@ -58,9 +58,9 @@ class Strategy:
 
 
 class Strategies:
-    AAVE = Strategy(address="0xE3C37e951F1404b162DFA71A13F0c99c9798Db82", name="Aave")
-    COMPOUND = Strategy(address="0x8AEA96da625791103a29a16C06c5cfC8B25f6832", name="Compound")
-    EULER = Strategy(address="0x9a902e8Aae5f1aB423c7aFB29C0Af50e0d3Fea7e", name="Euler")
+    AAVE = Strategy(address="0x75C5d2d8D54254476239a5c1e1F23ec48Df8779E", name="Aave")
+    COMPOUND = Strategy(address="0x5b7a52b6d75Fb3105c3c37fcc6007Eb7ac78F1B8", name="Compound")
+    EULER = Strategy(address="0xC124A8088c39625f125655152A168baA86b49026", name="Euler")
 
     ALL = [AAVE, COMPOUND, EULER]
 
