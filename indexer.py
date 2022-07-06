@@ -25,7 +25,9 @@ from models import (
     StatsAPY,
     StatsTVC,
     StatsTVL,
+    StrategyBalance,
 )
+from strategies.strategies import Strategies
 from utils import get_event_logs_in_range, requests_retry_session, time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
@@ -79,6 +81,7 @@ class Indexer:
             self.index_apy: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             # 268 blocks is roughly every hour on current Ethereum mainnet
             self.reset_apy_calc: 268,
+            self.index_strategy_balances: 1,
         }
 
     # Also get called after listening to events with `end_block`
@@ -263,6 +266,23 @@ class Indexer:
 
         # Reset factor
         indx.balance_factor = Decimal(1)
+
+    def index_strategy_balances(self, session, indx, block):
+        """Index each strategy's current balances.
+
+        Args:
+            session: DB session
+            indx: Indexer state
+            block: Block number
+        """
+        timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
+
+        for strategy in Strategies.ALL:
+            balance = strategy.get_balance(block)
+
+            if balance is not None:
+                # If strategy is deployed and active
+                StrategyBalance.insert(session, block, timestamp, strategy.address, balance)
 
     class Transfer:
         def new(self, session, indx, block, tx_hash, args):
