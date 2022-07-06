@@ -149,9 +149,6 @@ class Indexer:
         current_tvl = StatsTVL.get_current_tvl(session)
         premiums_per_second = Protocol.get_sum_of_premiums(session)
 
-        if not current_tvl or not apy or not premiums_per_second:
-            return
-
         premiums_apy = get_premiums_apy(current_tvl.value, apy, premiums_per_second)
 
         StatsAPY.insert(session, block, timestamp, apy, premiums_apy)
