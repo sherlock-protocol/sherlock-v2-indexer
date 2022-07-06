@@ -32,6 +32,22 @@ def time_delta_apy(old, new, time_delta):
     return apy
 
 
+def get_premiums_apy(tvl, apy, premiums):
+    """
+    Compute APY % generated only by premiums.
+    :param tvl: Current TVL.
+    :param apy: Total APY.
+    :para premiums: USDC amount of premiums generated per sencod.
+    :return: Annual Percentage Yield of premiums (1.3 => 130%)
+    """
+
+    total_annual_yield = Decimal(tvl) * Decimal(apy)
+    premiums_annual_yield = Decimal(premiums) * SECONDS_IN_A_YEAR
+    premiums_ratio = premiums_annual_yield / total_annual_yield
+
+    return Decimal(apy) * premiums_ratio
+
+
 def calculate_increment(amount, apy):
     """
     Compute an amount that can be added, every second,

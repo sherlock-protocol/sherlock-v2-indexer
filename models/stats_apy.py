@@ -13,13 +13,15 @@ class StatsAPY(Base):
     id = Column(BIGINT, primary_key=True)
     timestamp = Column(TIMESTAMP, nullable=False, default=datetime.min)
     value = Column(Float, nullable=False)
+    premiums_apy = Column(Float, nullable=False)
     block = Column(Integer, default=0)
 
     @staticmethod
-    def insert(session, block, timestamp, value):
+    def insert(session, block, timestamp, total_apy, premiums_apy):
         apy = StatsAPY()
         apy.timestamp = timestamp
-        apy.value = value
+        apy.value = total_apy
+        apy.premiums_apy = premiums_apy
         apy.block = block
 
         session.add(apy)
