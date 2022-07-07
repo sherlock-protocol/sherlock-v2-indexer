@@ -29,6 +29,10 @@ class StatsTVL(Base):
         session.add(tvl)
 
     @staticmethod
+    def get_current_tvl(session):
+        return session.query(StatsTVL).order_by(StatsTVL.timestamp.desc()).limit(1).one_or_none()
+
+    @staticmethod
     def find_all(session, offset, limit):
         return session.query(StatsTVL).order_by(StatsTVL.timestamp.asc()).offset(offset).limit(limit).all()
 
