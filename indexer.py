@@ -28,7 +28,7 @@ from models import (
     StrategyBalance,
 )
 from strategies.strategies import Strategies
-from utils import get_event_logs_in_range, requests_retry_session, time_delta_apy
+from utils import get_event_logs_in_range, get_premiums_apy, requests_retry_session, time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
@@ -154,7 +154,12 @@ class Indexer:
         timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
         apy = indx.apy
 
-        StatsAPY.insert(session, block, timestamp, apy)
+        current_tvl = StatsTVL.get_current_tvl(session)
+        premiums_per_second = Protocol.get_sum_of_premiums(session)
+
+        premiums_apy = get_premiums_apy(current_tvl.value, apy, premiums_per_second)
+
+        StatsAPY.insert(session, block, timestamp, apy, premiums_apy)
 
     def calc_tvl(self, session, indx, block):
         timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
