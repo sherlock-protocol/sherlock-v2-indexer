@@ -32,11 +32,10 @@ def time_delta_apy(old, new, time_delta):
     return apy
 
 
-def get_premiums_apy(tvl, apy, premiums):
+def get_premiums_apy(tvl, premiums):
     """
     Compute APY % generated only by premiums.
     :param tvl: Current TVL.
-    :param apy: Total APY.
     :param premiums: USDC amount of premiums generated per second.
     :return: Annual Percentage Yield of premiums (1.3 => 130%)
     """
