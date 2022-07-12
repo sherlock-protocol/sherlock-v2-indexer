@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy import Column, ForeignKey, Integer, func
 from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
 
 from models.base import Base
@@ -38,6 +38,21 @@ class ProtocolPremium(Base):
         protocol_premium.premium_set_at = premium_set_at
 
         session.add(protocol_premium)
+
+    @staticmethod
+    def get_sum_of_premiums(session):
+        # Sums up the latest premium of each protocol.
+        return (
+            session.query(func.sum(ProtocolPremium.premium))
+            .filter(
+                ProtocolPremium.id.in_(
+                    session.query(ProtocolPremium.id)
+                    .distinct(ProtocolPremium.protocol_id)
+                    .order_by(ProtocolPremium.protocol_id, ProtocolPremium.premium_set_at.desc())
+                )
+            )
+            .scalar()
+        )
 
     def to_dict(self):
         return {
