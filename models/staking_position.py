@@ -20,6 +20,7 @@ class StakingPositions(Base):
     usdc = Column(NUMERIC(78), nullable=False)
     sher = Column(NUMERIC(78), nullable=False)
     restake_count = Column(Integer, nullable=False, default=0, server_default="0")
+    block = Column(Integer, nullable=False)
 
     @staticmethod
     def get_for_factor(session):
@@ -48,6 +49,7 @@ class StakingPositions(Base):
         s.lockup_end = datetime.fromtimestamp(lockup_end)
         s.usdc = usdc
         s.sher = sher
+        s.block = block
 
         session.add(s)
 
