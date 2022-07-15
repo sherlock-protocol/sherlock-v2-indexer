@@ -27,6 +27,7 @@ from models import (
     StatsTVL,
     StrategyBalance,
 )
+from models.interval_function import IntervalFunction
 from strategies.strategies import Strategies
 from utils import get_event_logs_in_range, get_premiums_apy, requests_retry_session, time_delta_apy
 
@@ -80,7 +81,7 @@ class Indexer:
             self.calc_tvc: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.index_apy: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             # 268 blocks is roughly every hour on current Ethereum mainnet
-            self.reset_apy_calc: 268,
+            self.reset_apy_calc: 268 * 6,  # 6 hours
             self.index_strategy_balances: settings.INDEXER_STATS_BLOCKS_PER_CALL,
         }
 
@@ -512,8 +513,11 @@ class Indexer:
     def index_intervals(self, session, indx, block):
         logger.info("Running interval indexing functions")
         for func, interval in self.intervals.items():
-            if block % interval >= self.blocks_per_call:
+            # Check if the interval function must run
+            interval_function = IntervalFunction.get(session, func.__name__)
+            if block < interval_function.block_last_run + interval:
                 continue
+            interval_function.block_last_run = block
 
             logger.info("Running interval function  %s", func.__name__)
             try:
