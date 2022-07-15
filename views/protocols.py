@@ -5,7 +5,7 @@ from models.protocol_coverage import ProtocolCoverage
 
 
 def get_protocol_metadata(bytes_id):
-    return next(filter(lambda m: m["id"] == bytes_id, settings.PROTOCOLS_CSV), None)
+    return next(filter(lambda m: m["id"] == bytes_id, settings.PROTOCOLS_CSV), {})
 
 
 @app.route("/protocols")
