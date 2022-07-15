@@ -3,6 +3,7 @@ from .claim import Claim
 from .claim_status import ClaimStatus
 from .fundraise_position import FundraisePositions
 from .indexer_state import IndexerState
+from .interval_function import IntervalFunction
 from .protocol import Protocol
 from .protocol_coverage import ProtocolCoverage
 from .protocol_premium import ProtocolPremium
@@ -30,4 +31,5 @@ __all__ = [
     Claim,
     ClaimStatus,
     StrategyBalance,
+    IntervalFunction,
 ]
