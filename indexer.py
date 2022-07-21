@@ -562,7 +562,6 @@ class Indexer:
 
                 try:
                     func(self, session, indx, entry["blockNumber"], entry["transactionHash"].hex(), entry["args"])
-                    session.commit()
                 except IntegrityError as e:
                     logger.exception(e)
                     logger.warning(
@@ -570,7 +569,6 @@ class Indexer:
                         entry["event"],
                         entry["args"],
                     )
-                    session.rollback()
                     continue
 
                 logger.info("Processed %s event from smart contract", entry["event"])
