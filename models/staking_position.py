@@ -34,6 +34,10 @@ class StakingPositions(Base):
         )
 
     @staticmethod
+    def get_oldest_position(session):
+        return session.query(StakingPositions).order_by(StakingPositions.id).first()
+
+    @staticmethod
     def insert(session, block, id, owner):
         logger.info("Saving staking position #%s for %s", id, owner)
         lockup_end = settings.CORE_WSS.functions.lockupEnd(id).call(block_identifier=block)
@@ -86,6 +90,7 @@ class StakingPositions(Base):
         position.restake_count += 1
 
     def get_balance_data(self, block):
+        logger.info("Fetching balane data at block %s" % block)
         usdc = settings.CORE_WSS.functions.tokenBalanceOf(self.id).call(block_identifier=block)
 
         factor = usdc / self.usdc

@@ -9,6 +9,7 @@ from timeit import default_timer as timer
 
 from sqlalchemy.exc import IntegrityError
 from web3.constants import ADDRESS_ZERO
+from web3.exceptions import ContractLogicError
 
 import settings
 from models import (
@@ -217,26 +218,36 @@ class Indexer:
     def calc_apy(self, session, indx, block):
         """Compute the total APY and the premiums APY;
 
-        The total APY is computed using the delta between the last two TVL entries.
+        The total APY is computed using the delta of a staking position's balance.
 
         Args:
-            session (_type_): DB session
-            indx (_type_): Indexer state
-            block (_type_): Current block
+            session (State): DB session
+            indx (IndexerState): Indexer state
+            block (int): Current block
         """
-        logger.debug("Computing the APY")
-
-        # Compute the APY using the delta between the last two TVL entries
-        tvl_entries = StatsTVL.get_last_two(session)
-        if len(tvl_entries) != 2 or tvl_entries[1].value == 0:
-            logger.info("Skipped APY computation until we have two positive TVL entries.")
+        # FIXME: Situation where there are no staking positions but there is APY coming from protocols
+        # Fetch the oldest active staking position
+        position = StakingPositions.get_oldest_position(session)
+        if not position:
             return
 
-        current = tvl_entries[0]
-        previous = tvl_entries[1]
+        previous_block = block - settings.INDEXER_STATS_BLOCKS_PER_CALL
 
-        time_delta = current.timestamp.timestamp() - previous.timestamp.timestamp()
-        apy = time_delta_apy(previous.value, current.value, time_delta)
+        current_balance = settings.CORE_WSS.functions.tokenBalanceOf(position.id).call(block_identifier=block)
+        try:
+            previous_balance = settings.CORE_WSS.functions.tokenBalanceOf(position.id).call(
+                block_identifier=previous_block
+            )
+        except ContractLogicError:
+            logger.debug(
+                "Could not fetch previous balance. 24 hours must have passed since the oldest staking position was created."  # noqa
+            )
+            return
+
+        # Compute the APY using the delta between the staking position's balances
+        current_timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+        previous_timestamp = settings.WEB3_WSS.eth.get_block(previous_block)["timestamp"]
+        apy = time_delta_apy(previous_balance, current_balance, current_timestamp - previous_timestamp)
         logger.info("Computed an APY of %s", apy)
 
         # Update APY only if relevant, that means:
@@ -250,8 +261,16 @@ class Indexer:
         indx.apy = apy
 
         # Compute the APY coming from protocol premiums
+        tvl = StatsTVL.get_current_tvl(session)
+        if not tvl:
+            return
+
         premiums_per_second = ProtocolPremium.get_sum_of_premiums(session)
-        premiums_apy = get_premiums_apy(current.value, premiums_per_second) if premiums_per_second else 0
+        premiums_apy = get_premiums_apy(tvl.value, premiums_per_second) if premiums_per_second else 0
+
+        if premiums_apy < 0:
+            logger.warning("Premiums APY %s is being skipped because is negative." % premiums_apy)
+            return
 
         indx.premiums_apy = premiums_apy
 
