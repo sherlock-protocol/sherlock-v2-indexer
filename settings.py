@@ -85,6 +85,9 @@ LAST_POSITION_ID_FOR_15PERC_APY = config("LAST_POSITION_ID_FOR_15PERC_APY", cast
 with open("./meta/protocols.csv", newline="") as csv_file:
     PROTOCOLS_CSV = list(csv.DictReader(csv_file))
 
+    # Checksum addresses
+    PROTOCOLS_CSV = [{**entry, "agent": Web3.toChecksumAddress(entry["agent"])} for entry in PROTOCOLS_CSV]
+
 # Protocols TVL history
 with open("./meta/tvl_history.csv", newline="") as csv_file:
     TVL_HISTORY_CSV = list(csv.DictReader(csv_file))
