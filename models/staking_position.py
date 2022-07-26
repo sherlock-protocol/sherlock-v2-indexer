@@ -90,7 +90,6 @@ class StakingPositions(Base):
         position.restake_count += 1
 
     def get_balance_data(self, block):
-        logger.info("Fetching balane data at block %s" % block)
         usdc = settings.CORE_WSS.functions.tokenBalanceOf(self.id).call(block_identifier=block)
 
         factor = usdc / self.usdc

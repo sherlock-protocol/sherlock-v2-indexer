@@ -36,10 +36,6 @@ class StatsTVL(Base):
     def find_all(session, offset, limit):
         return session.query(StatsTVL).order_by(StatsTVL.timestamp.asc()).offset(offset).limit(limit).all()
 
-    @staticmethod
-    def get_last_two(session):
-        return session.query(StatsTVL).order_by(StatsTVL.timestamp.desc()).limit(2).all()
-
     def to_dict(self):
         """Converts object to dict.
         @return: dict
