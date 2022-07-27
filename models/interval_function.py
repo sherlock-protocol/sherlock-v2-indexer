@@ -14,7 +14,7 @@ class IntervalFunction(Base):
         interval = session.query(IntervalFunction).filter_by(name=name).one_or_none()
 
         if not interval:
-            interval = IntervalFunction(name=name)
+            interval = IntervalFunction(name=name, block_last_run=0)
             session.add(interval)
 
         return interval

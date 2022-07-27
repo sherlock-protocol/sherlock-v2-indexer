@@ -34,6 +34,10 @@ class StakingPositions(Base):
         )
 
     @staticmethod
+    def get_oldest_position(session):
+        return session.query(StakingPositions).order_by(StakingPositions.id).first()
+
+    @staticmethod
     def insert(session, block, id, owner):
         logger.info("Saving staking position #%s for %s", id, owner)
         lockup_end = settings.CORE_WSS.functions.lockupEnd(id).call(block_identifier=block)
