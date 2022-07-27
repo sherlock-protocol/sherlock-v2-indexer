@@ -79,7 +79,6 @@ class Indexer:
         }
 
         # Order is important, because some functions might depends on the result of the previous ones.
-        # - `calc_apy` must have an up to date TVL computed, so it must come after `calc_tvl`
         # - `index_apy` must have an up to date APY computed, so it must come after `calc_apy`
         self.intervals = {
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
