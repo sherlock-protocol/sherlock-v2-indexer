@@ -255,9 +255,8 @@ class Indexer:
         # using the balance factor which accounts for payouts.
         if apy < 0:
             logger.warning("APY %s is being skipped because is negative." % apy)
-            return
-
-        indx.apy = apy
+        else:
+            indx.apy = apy
 
         # Compute the APY coming from protocol premiums
         tvl = StatsTVL.get_current_tvl(session)
@@ -267,11 +266,13 @@ class Indexer:
         premiums_per_second = ProtocolPremium.get_sum_of_premiums(session)
         premiums_apy = get_premiums_apy(tvl.value, premiums_per_second) if premiums_per_second else 0
 
-        if premiums_apy < 0:
-            logger.warning("Premiums APY %s is being skipped because is negative." % premiums_apy)
-            return
-
-        indx.premiums_apy = premiums_apy
+        # When an increase in a protocol's premium takes place, and the TVL has not increased yet proportionally,
+        # the premiums APY will be higher than the total APY.
+        # We skip updating the premium until the next interval and wait for the TVL to increase.
+        if premiums_apy > indx.apy:
+            logger.warning("Premiums APY %s is being skipped beacuse it is higher than the total APY.")
+        else:
+            indx.premiums_apy = premiums_apy
 
     def reset_balance_factor(self, session, indx, block):
         """Update staking positions' balances to become up to date
