@@ -1,5 +1,5 @@
+import argparse
 import json
-import sys
 from decimal import Decimal
 
 import settings  # noqa
@@ -7,16 +7,25 @@ from models import Airdrop, Session
 
 
 def main():
-    assert len(sys.argv) >= 2, "Please provide a file to import"
-    filename = sys.argv[1]
+    parser = argparse.ArgumentParser(description="Import Merkle Tree data")
+    parser.add_argument(
+        "-f", "--file", metavar="path", type=argparse.FileType("r"), help="JSON file to import", required=True
+    )
+    parser.add_argument(
+        "-c", "--contract", metavar="address", type=str, help="Merkle Distributor contract address", required=True
+    )
+    parser.add_argument("-t", "--token", metavar="symbol", type=str, help="ERC20 token symbol", required=True)
 
-    with open(filename, "r") as file:
-        data = json.loads(file.read())
+    args = parser.parse_args()
+
+    data = json.loads(args.file.read())
 
     # Add to database
     with Session() as s:
         for address, claim in data["claims"].items():
-            Airdrop.insert(s, claim["index"], address, Decimal(int(claim["amount"], 16)), claim["proof"])
+            Airdrop.insert(
+                s, claim["index"], address, Decimal(int(claim["amount"], 16)), args.token, args.contract, claim["proof"]
+            )
 
         s.commit()
 

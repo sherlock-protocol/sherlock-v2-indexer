@@ -1,8 +1,8 @@
 """Create Airdrop model
 
-Revision ID: 7b2cb6761ec4
+Revision ID: 6d89ae0bffc6
 Revises: fe1a6b4ecd8a
-Create Date: 2022-08-04 17:06:12.862003
+Create Date: 2022-08-04 22:08:46.325358
 
 """
 import sqlalchemy as sa
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "7b2cb6761ec4"
+revision = "6d89ae0bffc6"
 down_revision = "fe1a6b4ecd8a"
 branch_labels = None
 depends_on = None
@@ -25,6 +25,8 @@ def upgrade():
         sa.Column("index", sa.Integer(), nullable=False),
         sa.Column("address", sa.String(length=42), nullable=False),
         sa.Column("amount", sa.NUMERIC(precision=78), nullable=False),
+        sa.Column("token_symbol", sa.String(length=10), nullable=False),
+        sa.Column("contract_address", sa.String(length=42), nullable=False),
         sa.Column("proof", postgresql.JSON(astext_type=sa.Text()), nullable=False),
         sa.Column("claimed_at_block", sa.Integer(), nullable=True),
         sa.Column("claimed_at_timestamp", postgresql.TIMESTAMP(), nullable=True),
