@@ -1,3 +1,4 @@
+from .airdrop import Airdrop
 from .base import Base, Session, engine
 from .claim import Claim
 from .claim_status import ClaimStatus
@@ -32,4 +33,5 @@ __all__ = [
     ClaimStatus,
     StrategyBalance,
     IntervalFunction,
+    Airdrop,
 ]
