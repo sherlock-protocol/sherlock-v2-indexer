@@ -23,7 +23,7 @@ class Airdrop(Base):
 
     @staticmethod
     def get(session, address):
-        return session.query(Airdrop).filter_by(address=address).first()
+        return session.query(Airdrop).filter_by(address=address).order_by(Airdrop.id.desc()).all()
 
     @staticmethod
     def insert(session, index, address, amount, token_symbol, contract_address, proof):
@@ -40,3 +40,16 @@ class Airdrop(Base):
         s.proof = proof
 
         session.add(s)
+
+    def to_dict(self):
+        """Converts object to dict.
+        @return: dict
+        """
+        d = {}
+        for column in self.__table__.columns:
+            data = getattr(self, column.name)
+            if column.name in ["claimed_at_timestamp"] and data is not None:
+                d[column.name] = int(data.timestamp())
+                continue
+            d[column.name] = data
+        return d

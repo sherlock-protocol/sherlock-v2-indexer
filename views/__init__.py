@@ -1,3 +1,4 @@
+from .airdrop import *  # noqa
 from .chain import *  # noqa
 from .claims import *  # noqa
 from .fundraise import *  # noqa
