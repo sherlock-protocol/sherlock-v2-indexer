@@ -13,6 +13,7 @@ from web3.exceptions import ContractLogicError
 
 import settings
 from models import (
+    Airdrop,
     Claim,
     ClaimStatus,
     FundraisePositions,
@@ -76,6 +77,8 @@ class Indexer:
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimCreated: self.ClaimCreated.new,
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimStatusChanged: self.ClaimStatusChanged.new,
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimPayout: self.ClaimPayout.new,
+            settings.USDC_MERKLE_DISTRIBUTOR_WSS.events.Claimed: self.AirdropClaimed.new,
+            settings.SHER_MERKLE_DISTRIBUTOR_WSS.events.Claimed: self.AirdropClaimed.new,
         }
 
         # Order is important, because some functions might depends on the result of the previous ones.
@@ -326,7 +329,7 @@ class Indexer:
                 StrategyBalance.insert(session, block, timestamp, strategy.address, balance)
 
     class Transfer:
-        def new(self, session, indx, block, tx_hash, args):
+        def new(self, session, indx, block, tx_hash, args, contract_address):
             if args["to"] == ADDRESS_ZERO:
                 StakingPositions.delete(session, args["tokenId"])
                 return
@@ -351,7 +354,7 @@ class Indexer:
             )
 
     class Purchase:
-        def new(self, session, indx, block, tx_hash, args):
+        def new(self, session, indx, block, tx_hash, args, contract_address):
             position = FundraisePositions.get(session, args["buyer"])
             if position is None:
                 FundraisePositions.insert(
@@ -368,20 +371,20 @@ class Indexer:
                 position.reward += args["amount"]
 
     class ProtocolAdded:
-        def new(self, session, indx, block, tx_hash, args):
+        def new(self, session, indx, block, tx_hash, args, contract_address):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
 
             Protocol.insert(session, protocol_bytes_id)
 
     class ProtocolAgentTransfer:
-        def new(self, session, indx, block, tx_hash, args):
+        def new(self, session, indx, block, tx_hash, args, contract_address):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             new_agent = args["to"]
 
             Protocol.update_agent(session, protocol_bytes_id, new_agent)
 
     class ProtocolPremiumChanged:
-        def new(self, session, indx, block, tx_hash, args):
+        def new(self, session, indx, block, tx_hash, args, contract_address):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             new_premium = args["newPremium"]
 
@@ -394,14 +397,14 @@ class Indexer:
             ProtocolPremium.insert(session, protocol.id, new_premium, timestamp)
 
     class ProtocolRemoved:
-        def new(self, session, indx, block, tx_hash, args):
+        def new(self, session, indx, block, tx_hash, args, contract_address):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
             Protocol.remove(session, protocol_bytes_id, timestamp)
 
     class Restaked:
-        def new(self, session, indx, block, tx_hash, args):
+        def new(self, session, indx, block, tx_hash, args, contract_address):
             token_id = args["tokenID"]
 
             # Update all database entries to be up to date with block
@@ -411,7 +414,7 @@ class Indexer:
             StakingPositions.restake(session, block, token_id)
 
     class ProtocolUpdated:
-        def new(self, session, indx, block, tx_hash, args):
+        def new(self, session, indx, block, tx_hash, args, contract_address):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             coverage_amount = args["coverageAmount"]
 
@@ -424,7 +427,7 @@ class Indexer:
             ProtocolCoverage.update(session, protocol.id, coverage_amount, timestamp)
 
     class ClaimCreated:
-        def new(self, session, indx, block, tx_hash, args):
+        def new(self, session, indx, block, tx_hash, args, contract_address):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             protocol = Protocol.get(session, protocol_bytes_id)
 
@@ -461,7 +464,7 @@ class Indexer:
             )
 
     class ClaimStatusChanged:
-        def new(self, session, indx, block, tx_hash, args):
+        def new(self, session, indx, block, tx_hash, args, contract_address):
             claim_id = args["claimID"]
             new_status = args["currentState"]
 
@@ -474,11 +477,20 @@ class Indexer:
             ClaimStatus.insert(session, claim_id, new_status, tx_hash, timestamp)
 
     class ClaimPayout:
-        def new(self, session, indx, block, tx_hash, args):
+        def new(self, session, indx, block, tx_hash, args, contract_address):
             claim_id = args["claimID"]
             timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
             ClaimStatus.insert(session, claim_id, ClaimStatus.Status.PaidOut.value, tx_hash, timestamp)
+
+    class AirdropClaimed:
+        def new(self, session, indx, block, tx_hash, args, contract_address):
+            index = args["index"]
+            account = args["account"]
+
+            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+
+            Airdrop.mark_claimed(session, index, account, contract_address, block, timestamp)
 
     def start(self):
         # get last block indexed from database
@@ -604,7 +616,15 @@ class Indexer:
                 logger.info("Processing %s event - Args: %s", entry["event"], entry["args"].__dict__)
 
                 try:
-                    func(self, session, indx, entry["blockNumber"], entry["transactionHash"].hex(), entry["args"])
+                    func(
+                        self,
+                        session,
+                        indx,
+                        entry["blockNumber"],
+                        entry["transactionHash"].hex(),
+                        entry["args"],
+                        entry["address"],
+                    )
                 except IntegrityError as e:
                     logger.exception(e)
                     logger.warning(

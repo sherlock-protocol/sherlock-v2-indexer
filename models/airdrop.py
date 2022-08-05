@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.dialects.postgresql import JSON, NUMERIC, TIMESTAMP
@@ -40,6 +41,19 @@ class Airdrop(Base):
         s.proof = proof
 
         session.add(s)
+
+    @staticmethod
+    def mark_claimed(session, index, address, contract_address, block, timestamp):
+        logger.info("Marking Airdrop Claim #%d for %s as claimed.", index, address)
+
+        claim = (
+            session.query(Airdrop)
+            .filter_by(index=index, address=address, contract_address=contract_address)
+            .one_or_none()
+        )
+
+        claim.claimed_at_block = block
+        claim.claimed_at_timestamp = datetime.fromtimestamp(timestamp)
 
     def to_dict(self):
         """Converts object to dict.
