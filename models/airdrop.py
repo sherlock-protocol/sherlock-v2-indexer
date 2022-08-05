@@ -28,6 +28,10 @@ class Airdrop(Base):
 
     @staticmethod
     def insert(session, index, address, amount, token_symbol, contract_address, proof):
+        if session.query(Airdrop).filter_by(index=index, contract_address=contract_address).one_or_none() is not None:
+            logger.warning("Airdrop entry %d already exists for contract %s", index, contract_address)
+            return
+
         logger.info(
             "Creating new Airdrop entry index %d for %s in amount of %s %s", index, address, amount, token_symbol
         )
