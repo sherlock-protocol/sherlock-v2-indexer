@@ -88,10 +88,10 @@ class Indexer:
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.calc_tvc: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.calc_apy: settings.INDEXER_STATS_BLOCKS_PER_CALL,
+            self.calc_additional_apy: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.index_apy: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.reset_balance_factor: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.index_strategy_balances: settings.INDEXER_STATS_BLOCKS_PER_CALL,
-            self.calc_additional_apy: settings.INDEXER_STATS_BLOCKS_PER_CALL
         }
 
     def calc_balance_factor(self, session, indx, block):
@@ -145,7 +145,7 @@ class Indexer:
             block: Current block
         """
         timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
-        apy = indx.apy
+        apy = indx.apy + indx.additional_apy
         premiums_apy = indx.premiums_apy
 
         StatsAPY.insert(session, block, timestamp, apy, premiums_apy)
