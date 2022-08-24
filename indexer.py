@@ -83,6 +83,7 @@ class Indexer:
 
         # Order is important, because some functions might depends on the result of the previous ones.
         # - `index_apy` must have an up to date APY computed, so it must come after `calc_apy`
+        # - `calc_additional_apy` must have TVL computed, so it must come after `calc_tvl`
         self.intervals = {
             self.calc_tvl: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.calc_tvc: settings.INDEXER_STATS_BLOCKS_PER_CALL,
@@ -90,7 +91,7 @@ class Indexer:
             self.index_apy: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.reset_balance_factor: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.index_strategy_balances: settings.INDEXER_STATS_BLOCKS_PER_CALL,
-            self.calc_additional_apy: 268 * 6,  # 6 hours
+            self.calc_additional_apy: settings.INDEXER_STATS_BLOCKS_PER_CALL
         }
 
     def calc_balance_factor(self, session, indx, block):
@@ -350,11 +351,6 @@ class Indexer:
             # If strategy is deployed and active and the APY has been successfully fetched
             if balance is not None and apy is not None:
                 TVL = session.query(StatsTVL).order_by(StatsTVL.timestamp.desc()).first()
-
-                # TVL not yet computed. Can happen if the interval for computing the additional APY
-                # is shorter than the interval for computing the TVL.
-                if not TVL or TVL.value == 0:
-                    return
 
                 logger.info("Balance is %s and TVL value is %s" % (balance, str(TVL.value)))
 
