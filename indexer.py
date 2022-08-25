@@ -149,8 +149,9 @@ class Indexer:
         timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
         apy = indx.apy + indx.additional_apy
         premiums_apy = indx.premiums_apy
+        incentives_apy = indx.incentives_apy
 
-        StatsAPY.insert(session, block, timestamp, apy, premiums_apy)
+        StatsAPY.insert(session, block, timestamp, apy, premiums_apy, incentives_apy)
 
     def calc_tvl(self, session, indx, block):
         timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
@@ -302,6 +303,9 @@ class Indexer:
         premiums_per_second = ProtocolPremium.get_sum_of_premiums(session)
         premiums_apy = get_premiums_apy(tvl.value, premiums_per_second) if premiums_per_second else 0
 
+        incentives_per_second = ProtocolPremium.get_usdc_incentive_premiums(session)
+        incentives_apy = get_premiums_apy(tvl.value, incentives_per_second) if incentives_per_second else 0
+
         # When an increase in a protocol's premium takes place, and the TVL has not increased yet proportionally,
         # the premiums APY will be higher than the total APY.
         # We skip updating the premium until the next interval and wait for the TVL to increase.
@@ -309,6 +313,12 @@ class Indexer:
             logger.warning("Premiums APY %s is being skipped beacuse it is higher than the total APY.")
         else:
             indx.premiums_apy = premiums_apy
+
+        if incentives_apy > indx.apy:
+            logger.warning("Incentive APY %s is being skipped beacuse it is higher than the total APY.")
+        else:
+            indx.incentives_apy = incentives_apy
+
 
     def reset_balance_factor(self, session, indx, block):
         """Update staking positions' balances to become up to date

@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlalchemy import Column, ForeignKey, Integer, func
 from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
 
+import settings
 from models.base import Base
 
 logger = logging.getLogger(__name__)
@@ -47,10 +48,23 @@ class ProtocolPremium(Base):
             .filter(
                 ProtocolPremium.id.in_(
                     session.query(ProtocolPremium.id)
+                    .filter(ProtocolPremium.protocol_id != settings.USDC_INCENTIVES_PROTOCOL)
                     .distinct(ProtocolPremium.protocol_id)
                     .order_by(ProtocolPremium.protocol_id, ProtocolPremium.premium_set_at.desc())
                 )
             )
+            .scalar()
+        )
+
+    @staticmethod
+    def get_usdc_incentive_premiums(session):
+        # Retrieve the latest premium paid by the USDC incentive protocol
+        # Could return None
+        return (
+            session.query(ProtocolPremium.premium)
+            .filter(ProtocolPremium.protocol_id == settings.USDC_INCENTIVES_PROTOCOL)
+            .order_by(ProtocolPremium.premium_set_at.desc())
+            .limit(1)
             .scalar()
         )
 

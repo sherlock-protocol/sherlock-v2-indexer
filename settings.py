@@ -117,6 +117,8 @@ with open("./meta/tvl_history.csv", newline="") as csv_file:
             {"timestamp": int(entry["timestamp"]), "value": int(float(entry["tvl"].replace(",", "")) * (10**6))}
         )
 
+USDC_INCENTIVES_PROTOCOL = "0x47a46b3628edc31155b950156914c27d25890563476422202887ed4298fc3c98"
+
 # LOGGING
 # ------------------------------------------------------------------------------
 logger = getLogger()
