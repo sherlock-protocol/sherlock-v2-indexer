@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
 
 import settings
 from models.base import Base
+from models.protocol import Protocol
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,6 @@ class ProtocolPremium(Base):
             .filter(
                 ProtocolPremium.id.in_(
                     session.query(ProtocolPremium.id)
-                    .filter(ProtocolPremium.protocol_id != settings.USDC_INCENTIVES_PROTOCOL)
                     .distinct(ProtocolPremium.protocol_id)
                     .order_by(ProtocolPremium.protocol_id, ProtocolPremium.premium_set_at.desc())
                 )
@@ -62,7 +62,8 @@ class ProtocolPremium(Base):
         # Could return None
         return (
             session.query(ProtocolPremium.premium)
-            .filter(ProtocolPremium.protocol_id == settings.USDC_INCENTIVES_PROTOCOL)
+            .join(Protocol, ProtocolPremium.protocol_id == Protocol.id)
+            .filter(Protocol.bytes_identifier == settings.USDC_INCENTIVES_PROTOCOL)
             .order_by(ProtocolPremium.premium_set_at.desc())
             .limit(1)
             .scalar()

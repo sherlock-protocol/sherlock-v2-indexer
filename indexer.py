@@ -301,9 +301,12 @@ class Indexer:
             return
 
         premiums_per_second = ProtocolPremium.get_sum_of_premiums(session)
-        premiums_apy = get_premiums_apy(tvl.value, premiums_per_second) if premiums_per_second else 0
-
         incentives_per_second = ProtocolPremium.get_usdc_incentive_premiums(session)
+
+        # Incentives are included in the total premiums, exclude them here
+        premiums_per_second -= incentives_per_second
+
+        premiums_apy = get_premiums_apy(tvl.value, premiums_per_second) if premiums_per_second else 0
         incentives_apy = get_premiums_apy(tvl.value, incentives_per_second) if incentives_per_second else 0
 
         # When an increase in a protocol's premium takes place, and the TVL has not increased yet proportionally,
