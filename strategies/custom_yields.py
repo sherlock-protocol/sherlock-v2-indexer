@@ -214,7 +214,7 @@ CUSTOM_YIELDS: List[CustomYield] = [MapleYield(Strategies.MAPLE), TrueFiYield(St
 
 
 if __name__ == "__main__":
-    apy = MapleYield(Strategies.TRUEFI).get_apy(14878797, 1)
+    apy = MapleYield(Strategies.MAPLE).get_apy(14878797, 1)
     print("Maple APY %s" % apy)
 
     apy = TrueFiYield(Strategies.TRUEFI.address).get_apy(14878797, 1)

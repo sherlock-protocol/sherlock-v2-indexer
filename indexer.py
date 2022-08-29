@@ -29,11 +29,10 @@ from models import (
     StatsTVL,
     StrategyBalance,
 )
-
 from models.interval_function import IntervalFunction
+from strategies.custom_yields import CUSTOM_YIELDS, MapleYield
 from strategies.strategies import Strategies
 from utils import get_event_logs_in_range, get_premiums_apy, requests_retry_session, time_delta_apy
-from strategies.custom_yields import CUSTOM_YIELDS
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
@@ -94,6 +93,7 @@ class Indexer:
             self.index_apy: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.reset_balance_factor: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.index_strategy_balances: settings.INDEXER_STATS_BLOCKS_PER_CALL,
+            self.log_maple_apy: 240,  # 1 hour
         }
 
     def calc_balance_factor(self, session, indx, block):
@@ -396,6 +396,23 @@ class Indexer:
 
         logger.info("Computed additional APY of %s" % additional_apy)
         indx.additional_apy = additional_apy
+
+    def log_maple_apy(self, session, indx, block):
+        """Log Maple APY to a file in order to save historical data.
+
+        Args:
+            session: DB session
+            indx: Indexer state
+            block: Block number
+        """
+        logger.info("Saving historical Maple APY")
+        timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
+
+        apy = MapleYield(Strategies.MAPLE).get_apy(0, 0)
+        logger.info("Maple APY: %s" % apy)
+
+        with open("maple.csv", "a") as f:
+            f.write(f"{block},{timestamp},{apy}")
 
     class Transfer:
         def new(self, session, indx, block, tx_hash, args):
