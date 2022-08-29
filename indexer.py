@@ -406,13 +406,13 @@ class Indexer:
             block: Block number
         """
         logger.info("Saving historical Maple APY")
-        timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
+        timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
         apy = MapleYield(Strategies.MAPLE).get_apy(0, 0)
         logger.info("Maple APY: %s" % apy)
 
         with open("maple.csv", "a") as f:
-            f.write(f"{block},{timestamp},{apy}")
+            f.write(f"{block},{timestamp},{apy}\n")
 
     class Transfer:
         def new(self, session, indx, block, tx_hash, args):
