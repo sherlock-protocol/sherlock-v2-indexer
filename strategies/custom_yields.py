@@ -210,12 +210,9 @@ class TrueFiYield(CustomYield):
             return None
 
 
-CUSTOM_YIELDS: List[CustomYield] = [MapleYield(Strategies.MAPLE), TrueFiYield(Strategies.TRUEFI)]
+CUSTOM_YIELDS: List[CustomYield] = [MapleYield(Strategies.MAPLE)]
 
 
 if __name__ == "__main__":
     apy = MapleYield(Strategies.MAPLE).get_apy(14878797, 1)
     print("Maple APY %s" % apy)
-
-    apy = TrueFiYield(Strategies.TRUEFI.address).get_apy(14878797, 1)
-    print("TrueFI APY %s" % apy)
