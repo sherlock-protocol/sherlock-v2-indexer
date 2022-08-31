@@ -16,3 +16,4 @@ class IndexerState(Base):
     apy = Column(Float, nullable=False, default=0.0)
     premiums_apy = Column(Float, nullable=False, default=0.0)
     apy_50ms_factor = Column(NUMERIC(78, 70), nullable=False, default=0.0)  # TODO: Remove unused column
+    additional_apy = Column(Float, nullable=False, default=0.0, server_default="0")

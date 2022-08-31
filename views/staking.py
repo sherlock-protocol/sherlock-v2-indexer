@@ -23,19 +23,23 @@ def staking_positions(user=None):
 
     # Compute USDC increment and updated balance
     apy = indexer_data.apy
+    additional_apy = indexer_data.additional_apy
+    expected_apy = apy + additional_apy
 
     for pos in positions:
-        position_apy = (
-            0.15 if (pos["id"] <= settings.LAST_POSITION_ID_FOR_15PERC_APY and pos["restake_count"] == 0) else apy
-        )
+        if pos["id"] <= settings.LAST_POSITION_ID_FOR_15PERC_APY and pos["restake_count"] == 0:
+            position_apy = 0.15
+            pos["usdc_increment"] = calculate_increment(pos["usdc"], position_apy)
+        else:
+            position_apy = expected_apy
+            pos["usdc_increment"] = calculate_increment(pos["usdc"], apy)
 
-        pos["usdc_increment"] = calculate_increment(pos["usdc"], position_apy)
         pos["usdc"] = round(pos["usdc"] * indexer_data.balance_factor)
         pos["usdc_apy"] = round(position_apy * 100, 6)
 
     return {
         "ok": True,
         "positions_usdc_last_updated": int(indexer_data.last_time.timestamp()),
-        "usdc_apy": round(apy * 100, 6),
+        "usdc_apy": round(expected_apy * 100, 6),
         "data": positions,
     }

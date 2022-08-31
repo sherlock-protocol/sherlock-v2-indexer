@@ -21,7 +21,6 @@ class StrategyBalance(Base):
     def insert(session, block, timestamp, address, value):
         new_balance = StrategyBalance()
         new_balance.address = address
-        new_balance.value = value
         new_balance.block = block
         new_balance.value = value
         new_balance.timestamp = timestamp
