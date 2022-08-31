@@ -1,7 +1,7 @@
 """add incentives_apy column
 
 Revision ID: 33b920ecf3d6
-Revises: fe1a6b4ecd8a
+Revises: 9563fd232d2f
 Create Date: 2022-08-25 08:58:09.448640
 
 """
