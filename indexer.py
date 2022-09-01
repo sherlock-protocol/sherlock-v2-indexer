@@ -147,7 +147,7 @@ class Indexer:
             block: Current block
         """
         timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
-        apy = indx.apy + indx.additional_apy
+        apy = Decimal(indx.apy) + Decimal(indx.additional_apy)
         premiums_apy = indx.premiums_apy
         incentives_apy = indx.incentives_apy
 
@@ -305,7 +305,7 @@ class Indexer:
 
         # Incentives are included in the total premiums, exclude them here
         if premiums_per_second is not None and incentives_per_second is not None:
-                premiums_per_second -= incentives_per_second
+            premiums_per_second -= incentives_per_second
 
         premiums_apy = get_premiums_apy(tvl.value, premiums_per_second) if premiums_per_second else 0
         incentives_apy = get_premiums_apy(tvl.value, incentives_per_second) if incentives_per_second else 0
@@ -322,7 +322,6 @@ class Indexer:
             logger.warning("Incentive APY %s is being skipped beacuse it is higher than the total APY.")
         else:
             indx.incentives_apy = incentives_apy
-
 
     def reset_balance_factor(self, session, indx, block):
         """Update staking positions' balances to become up to date
