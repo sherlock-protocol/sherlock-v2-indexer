@@ -4,7 +4,7 @@ import os
 from logging import Formatter, StreamHandler, getLogger
 from logging.handlers import TimedRotatingFileHandler
 
-from decouple import config
+from decouple import Csv, config
 from sqlalchemy import create_engine
 from web3 import Web3, WebsocketProvider
 from web3.middleware import geth_poa_middleware
@@ -73,6 +73,14 @@ with open(
     STRATEGY_ABI = json.load(json_data)["abi"]
 
 SHER_CLAIM_AT = SHER_CLAIM_WSS.functions.newEntryDeadline().call() + 60 * 60 * 24 * 7 * 26  # + 26 weeks
+
+MERKLE_DISTRIBUTOR_ADDRESSES = config("MERKLE_DISTRIBUTOR_ADDRESSES", cast=Csv())
+
+with open("abi/MerkleDistributor.json") as json_data:
+    MERKLE_DISTRIBUTOR_ABI = json.load(json_data)["abi"]
+MERKLE_DISTRIBUTORS_WSS = [
+    WEB3_WSS.eth.contract(address=address, abi=MERKLE_DISTRIBUTOR_ABI) for address in MERKLE_DISTRIBUTOR_ADDRESSES
+]
 
 INDEXER_BLOCKS_PER_CALL = 5
 INDEXER_STATS_BLOCKS_PER_CALL = 6400
