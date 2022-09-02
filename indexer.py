@@ -77,9 +77,10 @@ class Indexer:
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimCreated: self.ClaimCreated.new,
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimStatusChanged: self.ClaimStatusChanged.new,
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimPayout: self.ClaimPayout.new,
-            settings.USDC_MERKLE_DISTRIBUTOR_WSS.events.Claimed: self.AirdropClaimed.new,
-            settings.SHER_MERKLE_DISTRIBUTOR_WSS.events.Claimed: self.AirdropClaimed.new,
         }
+
+        for distributor in settings.MERKLE_DISTRIBUTORS_WSS:
+            self.events[distributor.events.Claimed] = self.AirdropClaimed.new
 
         # Order is important, because some functions might depends on the result of the previous ones.
         # - `index_apy` must have an up to date APY computed, so it must come after `calc_apy`
