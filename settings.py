@@ -132,6 +132,8 @@ with open("./meta/tvl_history.csv", newline="") as csv_file:
             {"timestamp": int(entry["timestamp"]), "value": int(float(entry["tvl"].replace(",", "")) * (10**6))}
         )
 
+USDC_INCENTIVES_PROTOCOL = "0x47a46b3628edc31155b950156914c27d25890563476422202887ed4298fc3c98"
+
 # LOGGING
 # ------------------------------------------------------------------------------
 logger = getLogger()
@@ -165,3 +167,8 @@ logger.handlers = []
 logger.addHandler(console_handler)
 logger.addHandler(file_handler)
 logger.addHandler(debug_file_handler)
+
+# SENTRY
+# ------------------------------------------------------------------------------
+SENTRY_DSN = config("SENTRY_DSN")
+SENTRY_ENVIRONMENT = config("SENTRY_ENVIRONMENT")

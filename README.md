@@ -54,4 +54,6 @@ SHERLOCK_V2_CORE_PATH=/home/evert/sherlock/sherlock-v2-core
 MERKLE_DISTRIBUTOR_PATH=/Users/acelasi/work/sherlock/merkle-distributor
 MERKLE_DISTRIBUTOR_ADDRESSES=0xa,0xb,0xc
 INDEXER_SLEEP_BETWEEN_CALL=0.1
+SENTRY_DSN=
+SENTRY_ENVIRONMENT=production
 ```

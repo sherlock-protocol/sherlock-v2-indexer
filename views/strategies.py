@@ -18,6 +18,10 @@ def strategies():
     for strategy in strategies:
         strat_obj = Strategies.get(strategy.address)
 
+        # Don't include strategies with 0 value
+        if strategy.value == 0:
+            continue
+
         data.append({**strategy.to_dict(), "name": strat_obj.name if strat_obj else "Unknown"})
 
     return {"ok": True, "data": data}

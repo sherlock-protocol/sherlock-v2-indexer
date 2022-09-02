@@ -3,6 +3,7 @@ import signal
 import sys
 from threading import Thread
 
+import sentry  # noqa
 import settings
 from flask_app import app
 from indexer import Indexer
