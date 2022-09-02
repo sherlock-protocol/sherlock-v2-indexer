@@ -1,7 +1,7 @@
 """Create Airdrop model
 
 Revision ID: 6d89ae0bffc6
-Revises: fe1a6b4ecd8a
+Revises: 33b920ecf3d6
 Create Date: 2022-08-04 22:08:46.325358
 
 """
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "6d89ae0bffc6"
-down_revision = "fe1a6b4ecd8a"
+down_revision = "33b920ecf3d6"
 branch_labels = None
 depends_on = None
 
