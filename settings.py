@@ -31,7 +31,6 @@ if "goerli" in config("WEB3_PROVIDER_WSS"):
 
 # Repo location on system
 REPO = config("SHERLOCK_V2_CORE_PATH")
-MERKLE_DISTRIBUTOR_REPO = config("MERKLE_DISTRIBUTOR_PATH")
 
 CORE_ADDRESS = config("SHERLOCK_V2_CORE")
 with open(os.path.join(REPO, "artifacts", "contracts", "Sherlock.sol", "Sherlock.json")) as json_data:
@@ -77,13 +76,7 @@ SHER_CLAIM_AT = SHER_CLAIM_WSS.functions.newEntryDeadline().call() + 60 * 60 * 2
 
 MERKLE_DISTRIBUTOR_ADDRESSES = config("MERKLE_DISTRIBUTOR_ADDRESSES", cast=Csv())
 
-with open(
-    os.path.join(
-        MERKLE_DISTRIBUTOR_REPO,
-        "build",
-        "MerkleDistributor.json",
-    )
-) as json_data:
+with open("abi/MerkleDistributor.json") as json_data:
     MERKLE_DISTRIBUTOR_ABI = json.load(json_data)["abi"]
 MERKLE_DISTRIBUTORS_WSS = [
     WEB3_WSS.eth.contract(address=address, abi=MERKLE_DISTRIBUTOR_ABI) for address in MERKLE_DISTRIBUTOR_ADDRESSES
