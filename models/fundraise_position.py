@@ -17,6 +17,7 @@ class FundraisePositions(Base):
     contribution = Column(NUMERIC(78), nullable=False)
     reward = Column(NUMERIC(78), nullable=False)
     claimable_at = Column(TIMESTAMP, nullable=False)
+    claimed_at = Column(TIMESTAMP, nullable=True)
 
     @staticmethod
     def insert(session, block, owner, stake, contribution, reward):
@@ -32,11 +33,9 @@ class FundraisePositions(Base):
         session.add(p)
 
     @staticmethod
-    def update(session, id, stake, contribution, reward):
+    def mark_as_claimed(session, id, timestamp):
         p = session.query(FundraisePositions).filter_by(id=id).one()
-        p.stake = stake
-        p.contribution = contribution
-        p.reward = reward
+        p.claimed_at = datetime.fromtimestamp(timestamp)
 
     @staticmethod
     def get(session, owner):
@@ -49,7 +48,7 @@ class FundraisePositions(Base):
         d = {}
         for column in self.__table__.columns:
             data = getattr(self, column.name)
-            if column.name in ["claimable_at"] and data is not None:
+            if column.name in ["claimable_at", "claimed_at"] and data is not None:
                 d[column.name] = int(data.timestamp())
                 continue
             d[column.name] = data
