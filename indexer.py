@@ -79,6 +79,7 @@ class Indexer:
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimCreated: self.ClaimCreated.new,
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimStatusChanged: self.ClaimStatusChanged.new,
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimPayout: self.ClaimPayout.new,
+            settings.SHER_CLAIM_WSS.events.Claim: self.FundraiseClaimed.new,
         }
 
         for distributor in settings.MERKLE_DISTRIBUTORS_WSS:
@@ -594,6 +595,14 @@ class Indexer:
             timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
             Airdrop.mark_claimed(session, index, account, contract_address, block, timestamp)
+
+    class FundraiseClaimed:
+        def new(self, session, indx, block, tx_hash, args, contract_address):
+            account = args["account"]
+
+            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+
+            FundraisePositions.mark_as_claimed(session, account, timestamp)
 
     def start(self):
         # get last block indexed from database
