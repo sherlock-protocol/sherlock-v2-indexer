@@ -657,6 +657,11 @@ class Indexer:
                     time.sleep(settings.INDEXER_SLEEP_BETWEEN_CALL)
                     continue
 
+                # Explicitly lock table
+                # Will make any other thread wait that tries to acquire the state
+                # Will be released on `commit`
+                # Will wait for lock to be released in case it's acquired
+                s.execute("LOCK indexer_state")
                 # If think update apy factor here? So we can already use in the events
                 indx = s.query(IndexerState).first()
 
@@ -677,12 +682,15 @@ class Indexer:
                 # Return connection to the connection pool
                 s.close()
 
-    def index_intervals(self, session, indx, block):
+    def index_intervals(self, session, indx, block, force=False):
         logger.info("Running interval indexing functions")
         for func, interval in self.intervals.items():
             # Check if the interval function must run
             interval_function = IntervalFunction.get(session, func.__name__)
-            if block < interval_function.block_last_run + interval:
+            if block <= interval_function.block_last_run:
+                # Can only be thrown when forcing intervals with custom block
+                raise RuntimeError("Can not run interval function in the past")
+            if block < interval_function.block_last_run + interval and not force:
                 continue
             interval_function.block_last_run = block
 
