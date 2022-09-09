@@ -16,7 +16,10 @@ API_DEBUG = config("API_DEBUG", default=False, cast=bool)
 DB_USER = config("DB_USER")
 DB_PASS = config("DB_PASS")
 DB_PORT = config("DB_PORT")
-DB_NAME = config("DB_NAME")
+if os.environ.get('PYTEST_CURRENT_TEST'):
+    DB_NAME = config("DB_NAME_TEST", default='indexer_test')
+else:
+    DB_NAME = config("DB_NAME")
 
 DATABASE_URI = "postgresql+psycopg2://{}:{}@localhost:{}/{}".format(DB_USER, DB_PASS, DB_PORT, DB_NAME)
 DB = create_engine(
