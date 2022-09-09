@@ -125,6 +125,32 @@ with open("./meta/tvl_history.csv", newline="") as csv_file:
             {"timestamp": int(entry["timestamp"]), "value": int(float(entry["tvl"].replace(",", "")) * (10**6))}
         )
 
+MAPLE_APY_HISTORY_CSV_NAME = config("MAPLE_APY_HISTORY_CSV_NAME", default="maple.csv")
+# [
+#    {
+#      'timestamp': 1234567,
+#      'value': 0.0521
+#    },
+#    {
+#      'timestamp': 1234568,
+#      'value': 0.0621
+#    },
+# ]
+APY_HISTORY_MAPLE = []
+if os.path.exists(MAPLE_APY_HISTORY_CSV_NAME):
+    with open(MAPLE_APY_HISTORY_CSV_NAME, newline="\n") as csv_file:
+        MAPLE_APY_HISTORY_CSV = list(csv.DictReader(csv_file))
+
+        for entry in MAPLE_APY_HISTORY_CSV:
+            APY_HISTORY_MAPLE.append(
+                {"timestamp": int(entry["timestamp"]), "value": float(entry["apy"])}
+            )
+else:
+    # Write CSV header if file is new
+    with open(MAPLE_APY_HISTORY_CSV_NAME, "w+") as csv_file:
+        csv_file.write("block,timestamp,apy\n")
+
+
 USDC_INCENTIVES_PROTOCOL = "0x47a46b3628edc31155b950156914c27d25890563476422202887ed4298fc3c98"
 
 # LOGGING

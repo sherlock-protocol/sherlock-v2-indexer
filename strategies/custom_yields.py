@@ -1,10 +1,11 @@
 import json
 import logging
+from datetime import datetime
 from typing import List, Optional, Tuple
 
 from attr import define
 
-from settings import WEB3_WSS
+from settings import WEB3_WSS, APY_HISTORY_MAPLE
 from utils import requests_retry_session
 
 from .strategies import Strategies, Strategy
@@ -35,7 +36,14 @@ class CustomYield:
 class MapleYield(CustomYield):
     pool_address = "0x6f6c8013f639979c84b756c7fc1500eb5af18dc4"  # Maven11 USDC Pool
 
-    def get_apy(self, block: int, timestamp: int) -> Optional[float]:
+    def get_apy(self, block: int, timestamp: int, log=False) -> Optional[float]:
+        for entry in APY_HISTORY_MAPLE:
+            if datetime.timestamp(timestamp) <= entry["timestamp"]:
+                # Return None if logging as it's already logged
+                if log:
+                    return None
+                return entry["value"]
+
         try:
             r = requests_retry_session()
 

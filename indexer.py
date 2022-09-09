@@ -426,10 +426,12 @@ class Indexer:
         logger.info("Saving historical Maple APY")
         timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
-        apy = MapleYield(Strategies.MAPLE).get_apy(0, 0)
+        apy = MapleYield(Strategies.MAPLE).get_apy(block, datetime.fromtimestamp(timestamp), log=True)
+        if apy is None:
+            return
         logger.info("Maple APY: %s" % apy)
 
-        with open("maple.csv", "a") as f:
+        with open(settings.MAPLE_APY_HISTORY_CSV_NAME, "a") as f:
             f.write(f"{block},{timestamp},{apy}\n")
 
     class Transfer:
