@@ -2,8 +2,8 @@ import csv
 import json
 import os
 from logging import Formatter, StreamHandler, getLogger
-from logging.handlers import TimedRotatingFileHandler
 
+from concurrent_log_handler import ConcurrentRotatingFileHandler
 from decouple import Csv, config
 from sqlalchemy import create_engine
 from web3 import Web3, WebsocketProvider
@@ -143,7 +143,7 @@ verbose_formatter = Formatter(
 
 
 # Redirect INFO+ logs to console and output.log
-file_handler = TimedRotatingFileHandler(filename="output.log", when="midnight", utc=True)
+file_handler = ConcurrentRotatingFileHandler("output.log", "a", 20 * 1024 * 1024, 20)
 file_handler.setLevel("INFO")
 file_handler.setFormatter(verbose_formatter)
 
@@ -152,7 +152,7 @@ console_handler.setLevel("INFO")
 console_handler.setFormatter(verbose_formatter)
 
 # Redirect DEBUG+ logs to separate file
-debug_file_handler = TimedRotatingFileHandler(filename="debug_output.log", when="midnight", utc=True)
+debug_file_handler = ConcurrentRotatingFileHandler("debug_output.log", "a", 20 * 1024 * 1024, 20)
 debug_file_handler.setLevel("DEBUG")
 debug_file_handler.setFormatter(verbose_formatter)
 
