@@ -661,7 +661,7 @@ class Indexer:
                 # Will make any other thread wait that tries to acquire the state
                 # Will be released on `commit`
                 # Will wait for lock to be released in case it's acquired
-                s.execute("LOCK indexer_state")
+                s.execute("select pg_advisory_xact_lock(1)")
                 # If think update apy factor here? So we can already use in the events
                 indx = s.query(IndexerState).first()
 

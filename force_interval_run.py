@@ -1,22 +1,21 @@
-import indexer
 import argparse
-import settings
-from models import (
-    Session,
-    IndexerState
-)
+
+import indexer
+from models import IndexerState, Session
 
 
 def main():
     parser = argparse.ArgumentParser(description="Forces all interval functions to run")
-    parser.add_argument("-b", "--block", metavar="block", type=int, help="Block to run interval functions", required=False)
+    parser.add_argument(
+        "-b", "--block", metavar="block", type=int, help="Block to run interval functions", required=False
+    )
     args = parser.parse_args()
 
     index = indexer.Indexer()
     with Session() as s:
         # Explicitly lock table
         # Will make the indexer thread wait if it tries to acquire the same table
-        s.execute("LOCK indexer_state")
+        s.execute("select pg_advisory_xact_lock(1)")
         indx = s.query(IndexerState).first()
         block = args.block if args.block else indx.last_block
 
@@ -48,6 +47,7 @@ def main():
             s.rollback()
             s.close()
             raise
+
 
 if __name__ == "__main__":
     main()
