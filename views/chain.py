@@ -1,6 +1,6 @@
 import time
 
-from flask import request
+from flask import jsonify, request
 
 from flask_app import app
 from models import IndexerState, Session
@@ -39,3 +39,13 @@ def wait_for_block():
             try_count += 1
 
         return {"ok": False, "error": "Exceeded maximum waiting time."}, 500
+
+
+@app.route("/last-block-indexed")
+def get_last_block_indexed():
+    """Fetch the last block indexed by the indexer."""
+
+    with Session() as s:
+        last_block = s.query(IndexerState.last_block).scalar()
+
+    return jsonify(last_block), 200
