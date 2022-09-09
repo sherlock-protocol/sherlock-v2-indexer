@@ -530,6 +530,9 @@ class Indexer:
 
             ProtocolCoverage.update(session, protocol.id, coverage_amount, timestamp)
 
+            # Coverages are updated, make new TVC calculation
+            self.calc_tvc(session, indx, block)
+
     class ClaimCreated:
         def new(self, session, indx, block, tx_hash, args, contract_address):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
