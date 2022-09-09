@@ -96,6 +96,10 @@ LAST_POSITION_ID_FOR_15PERC_APY = config("LAST_POSITION_ID_FOR_15PERC_APY", cast
 with open("./meta/protocols.csv", newline="") as csv_file:
     PROTOCOLS_CSV = list(csv.DictReader(csv_file))
 
+    # Remove as it conflicts with "premium" when rendering /protocols
+    for entry in PROTOCOLS_CSV:
+        del entry["premium"]
+
     # Checksum addresses
     PROTOCOLS_CSV = [{**entry, "agent": Web3.toChecksumAddress(entry["agent"])} for entry in PROTOCOLS_CSV]
 
