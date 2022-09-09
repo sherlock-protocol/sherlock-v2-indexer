@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
@@ -23,7 +24,7 @@ class StrategyBalance(Base):
         new_balance.address = address
         new_balance.block = block
         new_balance.value = value
-        new_balance.timestamp = timestamp
+        new_balance.timestamp = datetime.fromtimestamp(timestamp)
 
         session.add(new_balance)
 

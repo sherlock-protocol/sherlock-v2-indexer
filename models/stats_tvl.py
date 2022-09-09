@@ -22,7 +22,7 @@ class StatsTVL(Base):
     def insert(session, block, timestamp, value):
         logger.info("Inserting TVL value of %s at %s", value, timestamp)
         tvl = StatsTVL()
-        tvl.timestamp = timestamp
+        tvl.timestamp = datetime.fromtimestamp(timestamp)
         tvl.value = value
         tvl.block = block
 

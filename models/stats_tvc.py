@@ -22,7 +22,7 @@ class StatsTVC(Base):
     def insert(session, block, timestamp, value):
         logger.info("Inserting TVC value of %s at %s", value, timestamp)
         tvc = StatsTVC()
-        tvc.timestamp = timestamp
+        tvc.timestamp = datetime.fromtimestamp(timestamp)
         tvc.value = value
         tvc.block = block
 

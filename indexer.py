@@ -101,7 +101,7 @@ class Indexer:
             self.log_maple_apy: 240,  # 1 hour
         }
 
-    def calc_balance_factor(self, session, indx, block):
+    def calc_balance_factor(self, session, indx, block, timestamp):
         """
         Compute the balance factor (the balance increase since the last computation)
         by comparing a staking position's balance at two different moments in time.
@@ -125,7 +125,6 @@ class Indexer:
         # Compute the time delta between current block's timestamp
         # and the last time the balance have been updated.
         # Skip computation if no time has passed.
-        timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
         position_timedelta = timestamp - meta.usdc_last_updated.timestamp()
         if position_timedelta == 0:
             logger.info("No time has passed since last computation. Returning...")
@@ -143,7 +142,7 @@ class Indexer:
         indx.balance_factor = factor
         indx.last_time = datetime.fromtimestamp(timestamp)
 
-    def index_apy(self, session, indx, block):
+    def index_apy(self, session, indx, block, timestamp):
         """Index current total APY and premiums APY.
 
         Args:
@@ -151,21 +150,18 @@ class Indexer:
             indx: Indexer state
             block: Current block
         """
-        timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
         apy = Decimal(indx.apy) + Decimal(indx.additional_apy)
         premiums_apy = indx.premiums_apy
         incentives_apy = indx.incentives_apy
 
         StatsAPY.insert(session, block, timestamp, apy, premiums_apy, incentives_apy)
 
-    def calc_tvl(self, session, indx, block):
-        timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
+    def calc_tvl(self, session, indx, block, timestamp):
         tvl = settings.CORE_WSS.functions.totalTokenBalanceStakers().call(block_identifier=block)
 
         StatsTVL.insert(session, block, timestamp, tvl)
 
-    def calc_tvc(self, session, indx, block):
-        timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+    def calc_tvc(self, session, indx, block, timestamp):
         accumulated_tvc_for_block = 0
 
         requests = requests_retry_session()
@@ -223,11 +219,11 @@ class Indexer:
 
                 accumulated_tvc_for_block += int(protocol_tvc)
 
-            StatsTVC.insert(session, block, datetime.fromtimestamp(timestamp), accumulated_tvc_for_block)
+            StatsTVC.insert(session, block, timestamp, accumulated_tvc_for_block)
         except Exception as e:
             logger.exception("TVC calc encountered exception %s" % e)
 
-    def calc_apy(self, session, indx, block):
+    def calc_apy(self, session, indx, block, current_timestamp):
         """Compute the total APY and the premiums APY;
 
         The total APY is computed using the delta of a staking position's balance.
@@ -257,7 +253,6 @@ class Indexer:
             return
 
         # Compute the APY using the delta between the staking position's balances
-        current_timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
         previous_timestamp = settings.WEB3_WSS.eth.get_block(previous_block)["timestamp"]
         apy = time_delta_apy(previous_balance, current_balance, current_timestamp - previous_timestamp)
         logger.info("Computed an APY of %s", apy)
@@ -328,7 +323,7 @@ class Indexer:
         else:
             indx.incentives_apy = incentives_apy
 
-    def reset_balance_factor(self, session, indx, block):
+    def reset_balance_factor(self, session, indx, block, timestamp):
         """Update staking positions' balances to become up to date
         and reflect the real-time data from the contract, without
         actually interacting with the blockchain for each position.
@@ -354,7 +349,7 @@ class Indexer:
 
         # Compute the balance factor only if there is a staking position available
         if StakingPositions.get_for_factor(session):
-            self.calc_balance_factor(session, indx, block)
+            self.calc_balance_factor(session, indx, block, timestamp)
 
         # Update all staking positions with current factor
         StakingPositionsMeta.update(session, block, indx.balance_factor)
@@ -362,7 +357,7 @@ class Indexer:
         # Reset factor
         indx.balance_factor = Decimal(1)
 
-    def index_strategy_balances(self, session, indx, block):
+    def index_strategy_balances(self, session, indx, block, timestamp):
         """Index each strategy's current balances.
 
         Args:
@@ -370,8 +365,6 @@ class Indexer:
             indx: Indexer state
             block: Block number
         """
-        timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
-
         for strategy in Strategies.ALL:
             balance = strategy.get_balance(block)
 
@@ -379,7 +372,7 @@ class Indexer:
                 # If strategy is deployed and active
                 StrategyBalance.insert(session, block, timestamp, strategy.address, balance)
 
-    def calc_additional_apy(self, session, indx, block):
+    def calc_additional_apy(self, session, indx, block, timestamp):
         """Compute the additionl APY coming from custom yield strtegies.
         (e.g. Maple, TrueFi)
 
@@ -388,8 +381,6 @@ class Indexer:
             indx: Indexer state
             block: Block number
         """
-        timestamp = datetime.fromtimestamp(settings.WEB3_WSS.eth.get_block(block)["timestamp"])
-
         additional_apy = 0.0
         for custom_yield in CUSTOM_YIELDS:
             apy = custom_yield.get_apy(block, timestamp)
@@ -415,7 +406,7 @@ class Indexer:
         logger.info("Computed additional APY of %s" % additional_apy)
         indx.additional_apy = additional_apy
 
-    def log_maple_apy(self, session, indx, block):
+    def log_maple_apy(self, session, indx, block, timestamp):
         """Log Maple APY to a file in order to save historical data.
 
         Args:
@@ -424,16 +415,17 @@ class Indexer:
             block: Block number
         """
         logger.info("Saving historical Maple APY")
-        timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
-        apy = MapleYield(Strategies.MAPLE).get_apy(0, 0)
+        apy = MapleYield(Strategies.MAPLE).get_apy(block, timestamp, log=True)
+        if apy is None:
+            return
         logger.info("Maple APY: %s" % apy)
 
-        with open("maple.csv", "a") as f:
+        with open(settings.MAPLE_APY_HISTORY_CSV_NAME, "a") as f:
             f.write(f"{block},{timestamp},{apy}\n")
 
     class Transfer:
-        def new(self, session, indx, block, tx_hash, args, contract_address):
+        def new(self, session, indx, block, timestamp, tx_hash, args, contract_address):
             if args["to"] == ADDRESS_ZERO:
                 StakingPositions.delete(session, args["tokenId"])
                 return
@@ -447,7 +439,7 @@ class Indexer:
                 return
 
             # Update all database entries to be up to date with block
-            self.reset_balance_factor(session, indx, block)
+            self.reset_balance_factor(session, indx, block, timestamp)
 
             # Insert will retrieve active information (usdc, sher, lockup)
             StakingPositions.insert(
@@ -458,7 +450,7 @@ class Indexer:
             )
 
     class Purchase:
-        def new(self, session, indx, block, tx_hash, args, contract_address):
+        def new(self, session, indx, block, timestamp, tx_hash, args, contract_address):
             position = FundraisePositions.get(session, args["buyer"])
             if position is None:
                 FundraisePositions.insert(
@@ -475,20 +467,20 @@ class Indexer:
                 position.reward += args["amount"]
 
     class ProtocolAdded:
-        def new(self, session, indx, block, tx_hash, args, contract_address):
+        def new(self, session, indx, block, timestamp, tx_hash, args, contract_address):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
 
             Protocol.insert(session, protocol_bytes_id)
 
     class ProtocolAgentTransfer:
-        def new(self, session, indx, block, tx_hash, args, contract_address):
+        def new(self, session, indx, block, timestamp, tx_hash, args, contract_address):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             new_agent = args["to"]
 
             Protocol.update_agent(session, protocol_bytes_id, new_agent)
 
     class ProtocolPremiumChanged:
-        def new(self, session, indx, block, tx_hash, args, contract_address):
+        def new(self, session, indx, block, timestamp, tx_hash, args, contract_address):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             new_premium = args["newPremium"]
 
@@ -496,29 +488,26 @@ class Indexer:
             if not protocol:
                 return
 
-            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
-
             ProtocolPremium.insert(session, protocol.id, new_premium, timestamp)
 
     class ProtocolRemoved:
-        def new(self, session, indx, block, tx_hash, args, contract_address):
+        def new(self, session, indx, block, timestamp, tx_hash, args, contract_address):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
-            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
             Protocol.remove(session, protocol_bytes_id, timestamp)
 
     class Restaked:
-        def new(self, session, indx, block, tx_hash, args, contract_address):
+        def new(self, session, indx, block, timestamp, tx_hash, args, contract_address):
             token_id = args["tokenID"]
 
             # Update all database entries to be up to date with block
-            self.reset_balance_factor(session, indx, block)
+            self.reset_balance_factor(session, indx, block, timestamp)
 
             # Restake position
             StakingPositions.restake(session, block, token_id)
 
     class ProtocolUpdated:
-        def new(self, session, indx, block, tx_hash, args, contract_address):
+        def new(self, session, indx, block, timestamp, tx_hash, args, contract_address):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             coverage_amount = args["coverageAmount"]
 
@@ -526,12 +515,10 @@ class Indexer:
             if not protocol:
                 return
 
-            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
-
             ProtocolCoverage.update(session, protocol.id, coverage_amount, timestamp)
 
     class ClaimCreated:
-        def new(self, session, indx, block, tx_hash, args, contract_address):
+        def new(self, session, indx, block, timestamp, tx_hash, args, contract_address):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             protocol = Protocol.get(session, protocol_bytes_id)
 
@@ -568,7 +555,7 @@ class Indexer:
             )
 
     class ClaimStatusChanged:
-        def new(self, session, indx, block, tx_hash, args, contract_address):
+        def new(self, session, indx, block, timestamp, tx_hash, args, contract_address):
             claim_id = args["claimID"]
             new_status = args["currentState"]
 
@@ -576,31 +563,24 @@ class Indexer:
                 logger.info("Claim status is NonExistent. Won't index it.")
                 return
 
-            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
-
             ClaimStatus.insert(session, claim_id, new_status, tx_hash, timestamp)
 
     class ClaimPayout:
-        def new(self, session, indx, block, tx_hash, args, contract_address):
+        def new(self, session, indx, block, timestamp, tx_hash, args, contract_address):
             claim_id = args["claimID"]
-            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
             ClaimStatus.insert(session, claim_id, ClaimStatus.Status.PaidOut.value, tx_hash, timestamp)
 
     class AirdropClaimed:
-        def new(self, session, indx, block, tx_hash, args, contract_address):
+        def new(self, session, indx, block, timestamp, tx_hash, args, contract_address):
             index = args["index"]
             account = args["account"]
-
-            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
             Airdrop.mark_claimed(session, index, account, contract_address, block, timestamp)
 
     class FundraiseClaimed:
-        def new(self, session, indx, block, tx_hash, args, contract_address):
+        def new(self, session, indx, block, timestamp, tx_hash, args, contract_address):
             account = args["account"]
-
-            timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
 
             FundraisePositions.mark_as_claimed(session, account, timestamp)
 
@@ -696,7 +676,8 @@ class Indexer:
 
             logger.info("Running interval function  %s", func.__name__)
             try:
-                func(session, indx, block)
+                timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+                func(session, indx, block, timestamp)
             except IntegrityError as e:
                 logger.error(
                     "Could not process stats on block %s",
@@ -736,11 +717,13 @@ class Indexer:
                 logger.info("Processing %s event - Args: %s", entry["event"], entry["args"].__dict__)
 
                 try:
+                    timestamp = settings.WEB3_WSS.eth.get_block(entry["blockNumber"])["timestamp"]
                     func(
                         self,
                         session,
                         indx,
                         entry["blockNumber"],
+                        timestamp,
                         entry["transactionHash"].hex(),
                         entry["args"],
                         entry["address"],

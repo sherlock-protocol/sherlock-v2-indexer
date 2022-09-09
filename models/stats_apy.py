@@ -20,7 +20,7 @@ class StatsAPY(Base):
     @staticmethod
     def insert(session, block, timestamp, total_apy, premiums_apy, incentives_apy):
         apy = StatsAPY()
-        apy.timestamp = timestamp
+        apy.timestamp = datetime.fromtimestamp(timestamp)
         apy.value = total_apy
         apy.premiums_apy = premiums_apy
         apy.incentives_apy = incentives_apy
