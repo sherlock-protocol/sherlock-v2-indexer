@@ -38,8 +38,8 @@ class MapleYield(CustomYield):
 
     def get_apy(self, block: int, timestamp: int, log=False) -> Optional[float]:
         for entry in APY_HISTORY_MAPLE:
-            if datetime.timestamp(timestamp) <= entry["timestamp"]:
-                # Return None if logging as it's already logged
+            if timestamp <= entry["timestamp"]:
+                # Return `None` if call is logging reuest as it's already logged
                 if log:
                     return None
                 return entry["value"]
