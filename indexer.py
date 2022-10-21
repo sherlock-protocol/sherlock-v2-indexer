@@ -183,6 +183,13 @@ class Indexer:
 
                 protocol_coverage = protocol_coverages[0]
 
+                # Skip the protocol if the coverage has expired
+                if (
+                    protocol_coverage.claimable_until is not None
+                    and protocol_coverage.claimable_until < datetime.utcnow()
+                ):
+                    continue
+
                 protocol_tvl = 0
                 # If the TVL is hardcoded, we take the value and avoid calling DefiLlama
                 if row["id"] in settings.HARDCODED_TVL_PROTOCOLS:
