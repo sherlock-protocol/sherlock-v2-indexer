@@ -237,6 +237,19 @@ def restart_service(service: str):
     run_shell_command(command)
 
 
+def upload_airdrop_entries(db_name: str):
+    """Uploads the airdrop entries.
+
+    Args:
+        db_name (str): New DB name
+    """
+    logger.info("[+] Uploading the entries from airdrops.sql...")
+
+    command = f"PGPASSWORD={settings.DB_PASS} psql -U {settings.DB_USER} -d {db_name} -f airdrops.sql"
+
+    run_shell_command(command)
+
+
 def main():
     args = parse_args()
 
@@ -254,6 +267,9 @@ def main():
 
     # Initialize database
     initialize_database(args.block)
+
+    # Upload airdrop entries
+    upload_airdrop_entries(db_name)
 
     # Run indexer on new database until up to date
     reindex(connection)
