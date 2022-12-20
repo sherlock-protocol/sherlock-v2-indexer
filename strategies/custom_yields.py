@@ -218,7 +218,7 @@ class TrueFiYield(CustomYield):
             return None
 
 
-CUSTOM_YIELDS: List[CustomYield] = [MapleYield(Strategies.MAPLE)]
+CUSTOM_YIELDS: List[CustomYield] = []
 
 
 if __name__ == "__main__":

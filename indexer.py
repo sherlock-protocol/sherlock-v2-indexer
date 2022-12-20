@@ -98,7 +98,6 @@ class Indexer:
             self.index_apy: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.reset_balance_factor: settings.INDEXER_STATS_BLOCKS_PER_CALL,
             self.index_strategy_balances: settings.INDEXER_STATS_BLOCKS_PER_CALL,
-            self.log_maple_apy: 240,  # 1 hour
         }
 
     def calc_balance_factor(self, session, indx, block, timestamp):

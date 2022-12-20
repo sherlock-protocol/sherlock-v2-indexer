@@ -60,9 +60,8 @@ class Strategy:
 class Strategies:
     AAVE = Strategy(address="0x75C5d2d8D54254476239a5c1e1F23ec48Df8779E", name="Aave")
     COMPOUND = Strategy(address="0x5b7a52b6d75Fb3105c3c37fcc6007Eb7ac78F1B8", name="Compound")
-    MAPLE = Strategy(address="0xB2acd0214F87d217A2eF148aA4a5ABA71d3F7956", name="Maple")
 
-    ALL = [AAVE, COMPOUND, MAPLE]
+    ALL = [AAVE, COMPOUND]
 
     @classmethod
     def get(self, address):
