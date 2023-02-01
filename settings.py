@@ -94,7 +94,11 @@ with open("./meta/protocols.csv", newline="") as csv_file:
     PROTOCOLS_CSV = list(csv.DictReader(csv_file))
 
     # Checksum addresses
-    PROTOCOLS_CSV = [{**entry, "agent": Web3.toChecksumAddress(entry["agent"])} for entry in PROTOCOLS_CSV]
+    PROTOCOLS_CSV = [{
+        **entry,
+        "agent": Web3.toChecksumAddress(entry["agent"]),
+        "premium_float": float(entry["premium"].replace("%", "")) / 100 if len(entry["premium"]) != 0 else None
+    } for entry in PROTOCOLS_CSV]
 
 # Protocols TVL history
 with open("./meta/tvl_history.csv", newline="") as csv_file:

@@ -163,67 +163,31 @@ class Indexer:
     def calc_tvc(self, session, indx, block, timestamp):
         accumulated_tvc_for_block = 0
 
-        requests = requests_retry_session()
         try:
             for row in settings.PROTOCOLS_CSV:
                 if "id" not in row:
                     continue
+                if not row["premium_float"]:
+                    continue
 
                 protocol = Protocol.get(session, row["id"])
-
                 # Given that our datasource is the spreadsheet, the protocol could not be present in the DB yet
                 if not protocol:
                     continue
 
-                protocol_coverages = ProtocolCoverage.get_protocol_coverages(session, protocol.id)
-
-                if not protocol_coverages:
+                try:
+                    premium_amount = settings.SHERLOCK_PROTOCOL_MANAGER_WSS.functions.\
+                        premium(protocol.bytes_identifier).call(block_identifier=block)
+                except ContractLogicError:
                     continue
 
-                protocol_coverage = protocol_coverages[0]
-
-                # Skip the protocol if the coverage has expired
-                if (
-                    protocol_coverage.claimable_until is not None
-                    and protocol_coverage.claimable_until < datetime.utcnow()
-                ):
-                    continue
-
-                protocol_tvl = 0
-                # If the TVL is hardcoded, we take the value and avoid calling DefiLlama
-                if row["id"] in settings.HARDCODED_TVL_PROTOCOLS:
-                    # Find the TVL at current block (or the first existing block before current block)
-                    for entry in settings.HARDCODED_TVL_PROTOCOLS[row["id"]]:
-                        if entry["timestamp"] <= timestamp:
-                            protocol_tvl = entry["value"]
-                            break
-                elif row.get("defi_llama_slug"):
-                    # fetch protocol's TVL from DefiLlama
-                    response = requests.get("https://api.llama.fi/protocol/" + row["defi_llama_slug"])
-                    data = response.json()
-
-                    networks = row["networks"].split(",")
-                    for network in networks:
-                        if network in data["chainTvls"]:
-                            tvl_historical_data = data["chainTvls"][network]["tvl"]
-
-                            for tvl_data_point in reversed(tvl_historical_data):
-                                if tvl_data_point["date"] < timestamp:
-                                    protocol_tvl += tvl_data_point["totalLiquidityUSD"] * (10**6)
-                                    break
-
-                if not protocol_tvl:
-                    logger.warning("Could not register TVL for protocol %s" % row["tag"])
-                    continue
-
-                # Update protocol's TVL
+                protocol_tvl = int(premium_amount * float(YEAR) / row["premium_float"])
+                # Round to nearest amount by $10k TVL
+                protocol_tvl = round(protocol_tvl, -10)
                 logger.info("%s TVL is: %s", row["name"], protocol_tvl)
                 protocol.tvl = protocol_tvl
 
-                # if protocol's TVL < coverage_amount => TVC = TVL, otherwise TVC = coverage_amount
-                protocol_tvc = min(protocol_tvl, protocol_coverage.coverage_amount)
-
-                accumulated_tvc_for_block += int(protocol_tvc)
+                accumulated_tvc_for_block += protocol_tvl
 
             StatsTVC.insert(session, block, timestamp, accumulated_tvc_for_block)
         except Exception as e:
@@ -749,5 +713,5 @@ class Indexer:
 if __name__ == "__main__":
     logger.info("Started indexer process")
 
-    indexer = Indexer()
+    indexer = Indexer(2000)
     indexer.start()
