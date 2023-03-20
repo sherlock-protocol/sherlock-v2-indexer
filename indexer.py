@@ -243,15 +243,6 @@ class Indexer:
             )
             return
 
-        if apy > 0.15:
-            logger.warning("APY %s is being skipped because is higher than 15%%." % apy)
-            sentry.report_message(
-                "APY is being skipped because it higher than 15%!",
-                "warning",
-                {"current_apy": float(apy * 100)},
-            )
-            return
-
         if indx.apy != 0 and apy > indx.apy * 2.5:
             logger.warning(
                 "APY %s is being skipped because it is 2.5 times higher than the previous APY of %s" % (apy, indx.apy)
