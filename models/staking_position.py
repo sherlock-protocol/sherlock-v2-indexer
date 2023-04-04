@@ -35,7 +35,12 @@ class StakingPositions(Base):
 
     @staticmethod
     def get_oldest_position(session):
-        return session.query(StakingPositions).order_by(StakingPositions.id).first()
+        return (
+            session.query(StakingPositions)
+            .filter(StakingPositions.restake_count == 0)
+            .order_by(StakingPositions.id)
+            .first()
+        )
 
     @staticmethod
     def insert(session, block, id, owner):
