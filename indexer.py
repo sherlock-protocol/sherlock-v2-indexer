@@ -275,12 +275,14 @@ class Indexer:
         # the premiums APY will be higher than the total APY.
         # We skip updating the premium until the next interval and wait for the TVL to increase.
         if premiums_apy > indx.apy:
-            logger.warning("Premiums APY %s is being skipped beacuse it is higher than the total APY.")
+            logger.warning("Premiums APY %s is being skipped beacuse it is higher than the total APY." % premiums_apy)
         else:
             indx.premiums_apy = premiums_apy
 
         if incentives_apy > indx.apy:
-            logger.warning("Incentive APY %s is being skipped beacuse it is higher than the total APY.")
+            logger.warning(
+                "Incentive APY %s is being skipped beacuse it is higher than the total APY." % incentives_apy
+            )
         else:
             indx.incentives_apy = incentives_apy
 
