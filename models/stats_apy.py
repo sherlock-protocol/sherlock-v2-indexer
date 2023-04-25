@@ -30,7 +30,7 @@ class StatsAPY(Base):
 
     @staticmethod
     def find_all(session, offset, limit):
-        return session.query(StatsAPY).order_by(StatsAPY.timestamp.asc()).offset(offset).limit(limit).all()
+        return session.query(StatsAPY).order_by(StatsAPY.timestamp.desc()).offset(offset).limit(limit).all()
 
     def to_dict(self):
         """Converts object to dict.

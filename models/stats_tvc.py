@@ -46,7 +46,7 @@ class StatsTVC(Base):
 
     @staticmethod
     def find_all(session, offset, limit):
-        return session.query(StatsTVC).order_by(StatsTVC.timestamp.asc()).offset(offset).limit(limit).all()
+        return session.query(StatsTVC).order_by(StatsTVC.timestamp.desc()).offset(offset).limit(limit).all()
 
     def to_dict(self):
         """Converts object to dict.
