@@ -275,7 +275,7 @@ class Indexer:
             if block >= x_block:
                 fee = x_fee
                 break
-        premiums_apy = (1.0-fee) * premiums_apy
+        premiums_apy = Decimal(1.0-fee) * premiums_apy
 
         incentives_apy = get_premiums_apy(tvl.value, incentives_per_second) if incentives_per_second else 0
 
