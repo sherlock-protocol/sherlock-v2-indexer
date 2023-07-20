@@ -8,6 +8,7 @@ from decouple import Csv, config
 from sqlalchemy import create_engine
 from web3 import Web3, WebsocketProvider
 from web3.middleware import geth_poa_middleware
+from collections import OrderedDict
 
 API_HOST = config("API_HOST", default="127.0.0.1")
 API_PORT = config("API_PORT", default=5000, cast=int)
@@ -85,6 +86,12 @@ MERKLE_DISTRIBUTORS_WSS = [
 INDEXER_BLOCKS_PER_CALL = 5
 INDEXER_STATS_BLOCKS_PER_CALL = 6400
 INDEXER_SLEEP_BETWEEN_CALL = config("INDEXER_SLEEP_BETWEEN_CALL", default=5.0, cast=float)
+
+# block to fee
+FEE = OrderedDict({
+    17543991: 0.225,
+    0: 0.0,
+})
 
 # Will be used to flag the last position ID that get's 15% apy
 LAST_POSITION_ID_FOR_15PERC_APY = config("LAST_POSITION_ID_FOR_15PERC_APY", cast=int, default=10000000000000)
