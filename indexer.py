@@ -269,6 +269,14 @@ class Indexer:
             premiums_per_second -= incentives_per_second
 
         premiums_apy = get_premiums_apy(tvl.value, premiums_per_second) if premiums_per_second else 0
+
+        # Apply fee to premiums
+        for x_block, x_fee in settings.FEE.items():
+            if block >= x_block:
+                fee = x_fee
+                break
+        premiums_apy = (1.0-fee) * premiums_apy
+
         incentives_apy = get_premiums_apy(tvl.value, incentives_per_second) if incentives_per_second else 0
 
         # When an increase in a protocol's premium takes place, and the TVL has not increased yet proportionally,
