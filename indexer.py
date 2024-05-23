@@ -21,6 +21,7 @@ from models import (
     IndexerState,
     Protocol,
     ProtocolCoverage,
+    ProtocolNonstakers,
     ProtocolPremium,
     Session,
     StakingPositions,
@@ -33,7 +34,7 @@ from models import (
 from models.interval_function import IntervalFunction
 from strategies.custom_yields import CUSTOM_YIELDS, MapleYield
 from strategies.strategies import Strategies
-from utils import get_event_logs_in_range, get_premiums_apy, requests_retry_session, time_delta_apy
+from utils import get_event_logs_in_range, get_premiums_apy, time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
@@ -176,8 +177,9 @@ class Indexer:
                     continue
 
                 try:
-                    premium_amount = settings.SHERLOCK_PROTOCOL_MANAGER_WSS.functions.\
-                        premium(protocol.bytes_identifier).call(block_identifier=block)
+                    premium_amount = settings.SHERLOCK_PROTOCOL_MANAGER_WSS.functions.premium(
+                        protocol.bytes_identifier
+                    ).call(block_identifier=block)
                 except ContractLogicError:
                     continue
 
@@ -261,7 +263,8 @@ class Indexer:
         if not tvl:
             return
 
-        premiums_per_second = ProtocolPremium.get_sum_of_premiums(session)
+        premiums_per_second = ProtocolPremium.get_stakers_share_of_premiums(session)
+        print("Stakers share of premiums per second", premiums_per_second)
         incentives_per_second = ProtocolPremium.get_usdc_incentive_premiums(session)
 
         # Incentives are included in the total premiums, exclude them here
@@ -269,23 +272,19 @@ class Indexer:
             premiums_per_second -= incentives_per_second
 
         premiums_apy = get_premiums_apy(tvl.value, premiums_per_second) if premiums_per_second else 0
-
-        # Apply fee to premiums
-        for x_block, x_fee in settings.FEE.items():
-            if block >= x_block:
-                fee = x_fee
-                break
-        premiums_apy = Decimal(1.0-fee) * premiums_apy
+        logger.info("Computed a Premiums APY of %s", premiums_apy)
 
         incentives_apy = get_premiums_apy(tvl.value, incentives_per_second) if incentives_per_second else 0
+        logger.info("Computed an Incentives APY of %s", incentives_apy)
 
         # When an increase in a protocol's premium takes place, and the TVL has not increased yet proportionally,
         # the premiums APY will be higher than the total APY.
         # We skip updating the premium until the next interval and wait for the TVL to increase.
         if premiums_apy > indx.apy:
-            logger.warning("Premiums APY %s is being skipped beacuse it is higher than the total APY." % premiums_apy)
-        else:
-            indx.premiums_apy = premiums_apy
+            logger.warning("Premiums APY %s is being clamped because it is higher than the total APY." % premiums_apy)
+            premiums_apy = indx.apy
+
+        indx.premiums_apy = premiums_apy
 
         if incentives_apy > indx.apy:
             logger.warning(
@@ -481,12 +480,14 @@ class Indexer:
         def new(self, session, indx, block, timestamp, tx_hash, args, contract_address):
             protocol_bytes_id = Protocol.parse_bytes_id(args["protocol"])
             coverage_amount = args["coverageAmount"]
+            nonstakers = args["nonStakers"]
 
             protocol = Protocol.get(session, protocol_bytes_id)
             if not protocol:
                 return
 
             ProtocolCoverage.update(session, protocol.id, coverage_amount, timestamp)
+            ProtocolNonstakers.insert(session, protocol.id, nonstakers, timestamp)
 
     class ClaimCreated:
         def new(self, session, indx, block, timestamp, tx_hash, args, contract_address):
