@@ -8,7 +8,6 @@ from decouple import Csv, config
 from sqlalchemy import create_engine
 from web3 import Web3, WebsocketProvider
 from web3.middleware import geth_poa_middleware
-from collections import OrderedDict
 
 API_HOST = config("API_HOST", default="127.0.0.1")
 API_PORT = config("API_PORT", default=5000, cast=int)
@@ -87,12 +86,6 @@ INDEXER_BLOCKS_PER_CALL = 5
 INDEXER_STATS_BLOCKS_PER_CALL = 6400
 INDEXER_SLEEP_BETWEEN_CALL = config("INDEXER_SLEEP_BETWEEN_CALL", default=5.0, cast=float)
 
-# block to fee
-FEE = OrderedDict({
-    17543991: 0.225,
-    0: 0.0,
-})
-
 # Will be used to flag the last position ID that get's 15% apy
 LAST_POSITION_ID_FOR_15PERC_APY = config("LAST_POSITION_ID_FOR_15PERC_APY", cast=int, default=10000000000000)
 
@@ -101,11 +94,14 @@ with open("./meta/protocols.csv", newline="") as csv_file:
     PROTOCOLS_CSV = list(csv.DictReader(csv_file))
 
     # Checksum addresses
-    PROTOCOLS_CSV = [{
-        **entry,
-        "agent": Web3.toChecksumAddress(entry["agent"]),
-        "premium_float": float(entry["premium"].replace("%", "")) / 100 if len(entry["premium"]) != 0 else None
-    } for entry in PROTOCOLS_CSV]
+    PROTOCOLS_CSV = [
+        {
+            **entry,
+            "agent": Web3.toChecksumAddress(entry["agent"]),
+            "premium_float": float(entry["premium"].replace("%", "")) / 100 if len(entry["premium"]) != 0 else None,
+        }
+        for entry in PROTOCOLS_CSV
+    ]
 
 # Protocols TVL history
 with open("./meta/tvl_history.csv", newline="") as csv_file:
@@ -153,9 +149,7 @@ if os.path.exists(MAPLE_APY_HISTORY_CSV_NAME):
         MAPLE_APY_HISTORY_CSV = list(csv.DictReader(csv_file))
 
         for entry in MAPLE_APY_HISTORY_CSV:
-            APY_HISTORY_MAPLE.append(
-                {"timestamp": int(entry["timestamp"]), "value": float(entry["apy"])}
-            )
+            APY_HISTORY_MAPLE.append({"timestamp": int(entry["timestamp"]), "value": float(entry["apy"])})
 else:
     # Write CSV header if file is new
     with open(MAPLE_APY_HISTORY_CSV_NAME, "w+") as csv_file:

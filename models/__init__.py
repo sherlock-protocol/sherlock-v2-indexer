@@ -7,6 +7,7 @@ from .indexer_state import IndexerState
 from .interval_function import IntervalFunction
 from .protocol import Protocol
 from .protocol_coverage import ProtocolCoverage
+from .protocol_nonstakers import ProtocolNonstakers
 from .protocol_premium import ProtocolPremium
 from .staking_position import StakingPositions
 from .staking_positions_meta import StakingPositionsMeta
@@ -34,4 +35,5 @@ __all__ = [
     StrategyBalance,
     IntervalFunction,
     Airdrop,
+    ProtocolNonstakers,
 ]

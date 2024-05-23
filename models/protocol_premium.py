@@ -1,8 +1,10 @@
 import logging
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import Column, ForeignKey, Integer, func
 from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
+from sqlalchemy.orm import relationship
 
 import settings
 from models.base import Base
@@ -18,6 +20,8 @@ class ProtocolPremium(Base):
     protocol_id = Column(Integer, ForeignKey("protocols.id"), nullable=False)
     premium = Column(NUMERIC(78), nullable=False)
     premium_set_at = Column(TIMESTAMP, nullable=False)
+
+    protocol = relationship(Protocol)
 
     @staticmethod
     def insert(session, protocol_id, premium, timestamp):
@@ -55,6 +59,31 @@ class ProtocolPremium(Base):
             )
             .scalar()
         )
+
+    @staticmethod
+    def get_stakers_share_of_premiums(session) -> Decimal:
+        results = session.query(ProtocolPremium).filter(
+            ProtocolPremium.id.in_(
+                session.query(ProtocolPremium.id)
+                .distinct(ProtocolPremium.protocol_id)
+                .order_by(ProtocolPremium.protocol_id, ProtocolPremium.premium_set_at.desc())
+            ),
+            ProtocolPremium.premium > 0,
+        )
+
+        sum_of_premiums = Decimal("0")
+        for res in results:
+            nonstakers_fee = res.protocol.current_nonstakers.nonstakers / Decimal(1e18)
+            remaining_share = Decimal("1") - nonstakers_fee
+            premium_after_fee = res.premium * remaining_share
+
+            sum_of_premiums += premium_after_fee
+            print(
+                f"Protocol {res.protocol.bytes_identifier} only provides {remaining_share} "
+                f"of the premiums to Sherlock in amount to {premium_after_fee}"
+            )
+
+        return sum_of_premiums
 
     @staticmethod
     def get_usdc_incentive_premiums(session):
