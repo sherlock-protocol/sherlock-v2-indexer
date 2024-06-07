@@ -33,7 +33,7 @@ from models import (
 from models.interval_function import IntervalFunction
 from strategies.custom_yields import CUSTOM_YIELDS, MapleYield
 from strategies.strategies import Strategies
-from utils import get_event_logs_in_range, get_premiums_apy, requests_retry_session, time_delta_apy
+from utils import get_event_logs_in_range, get_premiums_apy, time_delta_apy
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
@@ -176,14 +176,15 @@ class Indexer:
                     continue
 
                 try:
-                    premium_amount = settings.SHERLOCK_PROTOCOL_MANAGER_WSS.functions.\
-                        premium(protocol.bytes_identifier).call(block_identifier=block)
+                    premium_amount = settings.SHERLOCK_PROTOCOL_MANAGER_WSS.functions.premium(
+                        protocol.bytes_identifier
+                    ).call(block_identifier=block)
                 except ContractLogicError:
                     continue
 
                 protocol_tvl = int(premium_amount * float(YEAR) / row["premium_float"])
-                # Round to nearest amount by $10k TVL
-                protocol_tvl = round(protocol_tvl, -10)
+                # Round to nearest amount by $5k TVL
+                protocol_tvl = round(protocol_tvl, -9)
                 logger.info("%s TVL is: %s", row["name"], protocol_tvl)
                 protocol.tvl = protocol_tvl
 
@@ -275,7 +276,7 @@ class Indexer:
             if block >= x_block:
                 fee = x_fee
                 break
-        premiums_apy = Decimal(1.0-fee) * premiums_apy
+        premiums_apy = Decimal(1.0 - fee) * premiums_apy
 
         incentives_apy = get_premiums_apy(tvl.value, incentives_per_second) if incentives_per_second else 0
 
