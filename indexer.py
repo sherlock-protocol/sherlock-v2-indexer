@@ -184,8 +184,8 @@ class Indexer:
                     continue
 
                 protocol_tvl = int(premium_amount * float(YEAR) / row["premium_float"])
-                # Round to nearest amount by $10k TVL
-                protocol_tvl = round(protocol_tvl, -10)
+                # Round to nearest amount by $5k TVL
+                protocol_tvl = round(protocol_tvl, -9)
                 logger.info("%s TVL is: %s", row["name"], protocol_tvl)
                 protocol.tvl = protocol_tvl
 
