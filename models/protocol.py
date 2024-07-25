@@ -26,8 +26,8 @@ class Protocol(Base):
     nonstakers = relationship("ProtocolNonstakers", back_populates="protocol", lazy="dynamic")
 
     @staticmethod
-    def parse_bytes_id(bytes):
-        return "0x" + bytes.hex()
+    def parse_bytes_id(bytes_id):
+        return "0x" + (bytes_id.hex() if isinstance(bytes_id, bytes) else bytes_id)
 
     @staticmethod
     def get(session, bytes_id):

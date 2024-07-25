@@ -29,6 +29,9 @@ WEB3_WSS = Web3(WebsocketProvider(config("WEB3_PROVIDER_WSS"), websocket_timeout
 if "goerli" in config("WEB3_PROVIDER_WSS"):
     WEB3_WSS.middleware_onion.inject(geth_poa_middleware, layer=0)
 
+# Events Cache URL
+EVENTS_CACHE_URL = config("EVENTS_CACHE_URL")
+
 # Repo location on system
 REPO = config("SHERLOCK_V2_CORE_PATH")
 
