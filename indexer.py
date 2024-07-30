@@ -135,7 +135,7 @@ class Indexer:
         # Fetch an active staking position
         positions = session.query(StakingPositions).order_by(StakingPositions.usdc.desc()).all()
         if len(positions) == 0:
-            logger.info("No staking positions ")
+            logger.info("No staking positions")
 
         safe_time = datetime.fromtimestamp(timestamp) + timedelta(days=7)
         for position in positions:
@@ -181,9 +181,10 @@ class Indexer:
         StatsTVL.insert(session, block, timestamp, tvl)
 
     def calc_tvc(self, session, indx, block, timestamp):
-        accumulated_tvc_for_block = 0
-        accumulated_external_coverage_for_block = 0
+        accumulated_tvc_for_block = Decimal("0")
+        accumulated_external_coverage_for_block = Decimal("0")
 
+        now = datetime.fromtimestamp(timestamp)
         try:
             for row in settings.PROTOCOLS_CSV:
                 if "id" not in row:
@@ -191,7 +192,8 @@ class Indexer:
                 if not row["premium_float"]:
                     continue
 
-                protocol = Protocol.get(session, row["id"])
+                protocol_id = row["id"]
+                protocol = Protocol.get(session, protocol_id)
                 # Given that our datasource is the spreadsheet, the protocol could not be present in the DB yet
                 if not protocol:
                     continue
@@ -203,6 +205,7 @@ class Indexer:
                 except ContractLogicError:
                     continue
 
+                # Compute protocol TVL
                 protocol_tvl = int(premium_amount * float(YEAR) / row["premium_float"])
                 # Round to nearest amount by $5k TVL
                 protocol_tvl = round(protocol_tvl, -9)
@@ -211,14 +214,32 @@ class Indexer:
 
                 accumulated_tvc_for_block += protocol_tvl
 
-                # Calculate external coverage
-                nonstakers_fee = protocol.current_nonstakers.nonstakers / Decimal(1e18)
-                sherlock_fee = Decimal("0.1")
-                nexus_share = (nonstakers_fee - sherlock_fee) / Decimal("0.9")
-                external_coverage = max(Decimal("0"), protocol_tvl * nexus_share)
-                logger.info(f"{row['name']} External Coverage is: {external_coverage:,}")
+                # Compute protocol external coverage
+                external_coverage = None
+                if (
+                    now < settings.HARDCODED_PROTOCOL_EXTERNAL_COVERAGE_END_DATE
+                    and protocol_id in settings.HARDCODED_PROTOCOL_EXTERNAL_COVERAGE
+                ):
+                    # Use hardcoded protocol external coverage value
+                    for start_date, amount in settings.HARDCODED_PROTOCOL_EXTERNAL_COVERAGE[protocol_id].items():
+                        if now >= start_date:
+                            external_coverage = Decimal(amount) * Decimal("1000000")
 
+                if not external_coverage:
+                    # Compute external coverage value based on on-chain values
+                    nonstakers_fee = protocol.current_nonstakers.nonstakers / Decimal(1e18)
+                    sherlock_fee = Decimal("0.1")
+                    nexus_share = (nonstakers_fee - sherlock_fee) / Decimal("0.9")
+                    external_coverage = max(Decimal("0"), protocol_tvl * nexus_share)
+
+                logger.info(f"{row['name']} External Coverage is: {external_coverage:,}")
                 accumulated_external_coverage_for_block += external_coverage
+
+            if now < settings.HARDCODED_TOTAL_EXTERNAL_COVERAGE_END_DATE:
+                # Use hardcoded total external coverage value
+                for start_date, amount in settings.HARDCODED_TOTAL_EXTERNAL_COVERAGE.items():
+                    if now >= start_date:
+                        accumulated_external_coverage_for_block = Decimal(amount) * Decimal("1000000")
 
             StatsTVC.insert(session, block, timestamp, accumulated_tvc_for_block)
             StatsExternalCoverage.insert(session, block, timestamp, accumulated_external_coverage_for_block)
@@ -289,19 +310,19 @@ class Indexer:
             )
             return
 
-        if indx.apy != 0 and apy > Decimal(indx.apy) * Decimal("2.5"):
-            logger.warning(
-                "APY %s is being skipped because it is 2.5 times higher than the previous APY of %s" % (apy, indx.apy)
-            )
-            sentry.report_message(
-                "APY is 2.5 times higher than the previous APY!",
-                "warning",
-                {
-                    "current_apy": float(apy * 100),
-                    "previous_apy": float(indx.apy * 100),
-                },
-            )
-            return
+        # if indx.apy != 0 and apy > Decimal(indx.apy) * Decimal("2.5"):
+        #     logger.warning(
+        #         "APY %s is being skipped because it is 2.5 times higher than the previous APY of %s" % (apy, indx.apy)
+        #     )
+        #     sentry.report_message(
+        #         "APY is 2.5 times higher than the previous APY!",
+        #         "warning",
+        #         {
+        #             "current_apy": float(apy * 100),
+        #             "previous_apy": float(indx.apy * 100),
+        #         },
+        #     )
+        #     return
 
         indx.apy = apy
 
