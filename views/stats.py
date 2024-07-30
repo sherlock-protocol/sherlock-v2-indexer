@@ -4,7 +4,7 @@ import sqlalchemy as sa
 from flask import request
 
 from flask_app import app
-from models import Session, StatsAPY, StatsTVC, StatsTVL
+from models import Session, StatsAPY, StatsExternalCoverage, StatsTVC, StatsTVL
 from models.staking_position import StakingPositions
 
 
@@ -34,6 +34,24 @@ def stats_tvc():
         limit = args.get("limit", default=365)
 
         stats = StatsTVC.find_all(s, offset, limit)
+
+    # Transform rows in list of dictionaries
+    stats = [x.to_dict() for x in stats]
+
+    return {
+        "ok": True,
+        "data": stats,
+    }
+
+
+@app.route("/stats_external_coverage")
+def stats_external_coverage():
+    args = request.args
+    with Session() as s:
+        offset = args.get("offset", default=0)
+        limit = args.get("limit", default=365)
+
+        stats = StatsExternalCoverage.find_all(s, offset, limit)
 
     # Transform rows in list of dictionaries
     stats = [x.to_dict() for x in stats]

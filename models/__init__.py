@@ -12,6 +12,7 @@ from .protocol_premium import ProtocolPremium
 from .staking_position import StakingPositions
 from .staking_positions_meta import StakingPositionsMeta
 from .stats_apy import StatsAPY
+from .stats_external_coverage import StatsExternalCoverage
 from .stats_tvc import StatsTVC
 from .stats_tvl import StatsTVL
 from .strategy_balance import StrategyBalance
@@ -36,4 +37,5 @@ __all__ = [
     IntervalFunction,
     Airdrop,
     ProtocolNonstakers,
+    StatsExternalCoverage,
 ]

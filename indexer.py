@@ -27,6 +27,7 @@ from models import (
     StakingPositions,
     StakingPositionsMeta,
     StatsAPY,
+    StatsExternalCoverage,
     StatsTVC,
     StatsTVL,
     StrategyBalance,
@@ -34,7 +35,13 @@ from models import (
 from models.interval_function import IntervalFunction
 from strategies.custom_yields import CUSTOM_YIELDS, MapleYield
 from strategies.strategies import Strategies
-from utils import get_core_contract_token_values, get_event_logs_in_range, get_premiums_apy, time_delta_apy
+from utils import (
+    get_block_timestamp,
+    get_core_contract_token_values,
+    get_event_logs_in_range,
+    get_premiums_apy,
+    time_delta_apy,
+)
 
 YEAR = Decimal(timedelta(days=365).total_seconds())
 getcontext().prec = 78
@@ -66,12 +73,12 @@ class Indexer:
             settings.CORE_WSS.events.Restaked: self.Restaked.new,
             settings.CORE_WSS.events.ArbRestaked: self.Restaked.new,
             settings.SHER_BUY_WSS.events.Purchase: self.Purchase.new,
+            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemoved: self.ProtocolRemoved.new,
+            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolAdded: self.ProtocolAdded.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolAgentTransfer: self.ProtocolAgentTransfer.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolUpdated: self.ProtocolUpdated.new,
             settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolPremiumChanged: self.ProtocolPremiumChanged.new,
-            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemoved: self.ProtocolRemoved.new,
-            settings.SHERLOCK_PROTOCOL_MANAGER_WSS.events.ProtocolRemovedByArb: self.ProtocolRemoved.new,
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimCreated: self.ClaimCreated.new,
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimStatusChanged: self.ClaimStatusChanged.new,
             settings.SHERLOCK_CLAIM_MANAGER_WSS.events.ClaimPayout: self.ClaimPayout.new,
@@ -126,16 +133,32 @@ class Indexer:
             return
 
         # Fetch an active staking position
-        position = StakingPositions.get_for_factor(session)
+        positions = session.query(StakingPositions).order_by(StakingPositions.usdc.desc()).all()
+        if len(positions) == 0:
+            logger.info("No staking positions ")
 
-        # Fetch current position balance as well as
-        # the increase since the last computation (a.k.a the balance factor)
-        usdc, factor = position.get_balance_data(block)
-        logger.info("Computed a balance factor of %s", factor)
+        safe_time = datetime.fromtimestamp(timestamp) + timedelta(days=7)
+        for position in positions:
+            # Look for a position that is not going to expire soon
+            if position.lockup_end < safe_time:
+                continue
 
-        # Save the computation by updating the indexer state
-        indx.balance_factor = factor
-        indx.last_time = datetime.fromtimestamp(timestamp)
+            try:
+                # Fetch current position balance as well as
+                # the increase since the last computation (a.k.a the balance factor)
+                _, factor = position.get_balance_data(block)
+                logger.info("Computed a balance factor of %s", factor)
+
+                # Save the computation by updating the indexer state
+                indx.balance_factor = factor
+                indx.last_time = datetime.fromtimestamp(timestamp)
+
+                # Return after successfully calculating the balance factor
+                return
+            except Exception as e:
+                logger.exception(e)
+
+        logger.info("Could not calculate balance factor for any existing staking positions")
 
     def index_apy(self, session, indx, block, timestamp):
         """Index current total APY and premiums APY.
@@ -152,12 +175,14 @@ class Indexer:
         StatsAPY.insert(session, block, timestamp, apy, premiums_apy, incentives_apy)
 
     def calc_tvl(self, session, indx, block, timestamp):
+        logger.info(f"Calculating TVL at block {block}")
         tvl = settings.CORE_WSS.functions.totalTokenBalanceStakers().call(block_identifier=block)
 
         StatsTVL.insert(session, block, timestamp, tvl)
 
     def calc_tvc(self, session, indx, block, timestamp):
         accumulated_tvc_for_block = 0
+        accumulated_external_coverage_for_block = 0
 
         try:
             for row in settings.PROTOCOLS_CSV:
@@ -181,12 +206,22 @@ class Indexer:
                 protocol_tvl = int(premium_amount * float(YEAR) / row["premium_float"])
                 # Round to nearest amount by $5k TVL
                 protocol_tvl = round(protocol_tvl, -9)
-                logger.info("%s TVL is: %s", row["name"], protocol_tvl)
+                logger.info(f"{row['name']} TVL is: {protocol_tvl:,}")
                 protocol.tvl = protocol_tvl
 
                 accumulated_tvc_for_block += protocol_tvl
 
+                # Calculate external coverage
+                nonstakers_fee = protocol.current_nonstakers.nonstakers / Decimal(1e18)
+                sherlock_fee = Decimal("0.1")
+                nexus_share = (nonstakers_fee - sherlock_fee) / Decimal("0.9")
+                external_coverage = max(Decimal("0"), protocol_tvl * nexus_share)
+                logger.info(f"{row['name']} External Coverage is: {external_coverage:,}")
+
+                accumulated_external_coverage_for_block += external_coverage
+
             StatsTVC.insert(session, block, timestamp, accumulated_tvc_for_block)
+            StatsExternalCoverage.insert(session, block, timestamp, accumulated_external_coverage_for_block)
         except Exception as e:
             logger.exception("TVC calc encountered exception %s" % e)
 
@@ -206,10 +241,23 @@ class Indexer:
         if not position:
             return
 
+        logger.info("Calculating APY")
+        logger.info(f"Current block {block}")
         previous_block = block - settings.INDEXER_STATS_BLOCKS_PER_CALL
+        logger.info(f"Previous block {previous_block}")
 
-        token_values = get_core_contract_token_values(block=block, token_id=position.id)
-        current_balance = int(token_values["usdc"])
+        if previous_block < settings.INDEXER_START_BLOCK:
+            logger.info("Too soon to calculate APY. Skipping...")
+            return
+
+        try:
+            token_values = get_core_contract_token_values(block=block, token_id=position.id)
+            current_balance = int(token_values["usdc"])
+        except Exception as e:
+            logger.exception(e)
+            logger.debug("Could not fetch current balance. The position is too fresh for the current block")
+            return
+
         try:
             prev_token_values = get_core_contract_token_values(block=previous_block, token_id=position.id)
             previous_balance = int(prev_token_values["usdc"])
@@ -221,7 +269,7 @@ class Indexer:
             return
 
         # Compute the APY using the delta between the staking position's balances
-        previous_timestamp = settings.WEB3_WSS.eth.get_block(previous_block)["timestamp"]
+        previous_timestamp = get_block_timestamp(previous_block)
         apy = time_delta_apy(previous_balance, current_balance, current_timestamp - previous_timestamp)
         logger.info("Computed an APY of %s", apy)
 
@@ -241,7 +289,7 @@ class Indexer:
             )
             return
 
-        if indx.apy != 0 and apy > indx.apy * 2.5:
+        if indx.apy != 0 and apy > Decimal(indx.apy) * Decimal("2.5"):
             logger.warning(
                 "APY %s is being skipped because it is 2.5 times higher than the previous APY of %s" % (apy, indx.apy)
             )
@@ -317,8 +365,7 @@ class Indexer:
         """
 
         # Compute the balance factor only if there is a staking position available
-        if StakingPositions.get_for_factor(session):
-            self.calc_balance_factor(session, indx, block, timestamp)
+        self.calc_balance_factor(session, indx, block, timestamp)
 
         # Update all staking positions with current factor
         StakingPositionsMeta.update(session, block, indx.balance_factor)
@@ -638,25 +685,36 @@ class Indexer:
         for func, interval in self.intervals.items():
             # Check if the interval function must run
             interval_function = IntervalFunction.get(session, func.__name__)
-            if block <= interval_function.block_last_run:
+            function_last_run = interval_function.block_last_run or settings.INDEXER_START_BLOCK - 1
+            if block <= function_last_run:
                 # Can only be thrown when forcing intervals with custom block
                 raise RuntimeError("Can not run interval function in the past")
-            if block < interval_function.block_last_run + interval and not force:
+            if block < function_last_run + interval and not force:
+                logger.info("Too soon to run the intervals")
                 continue
-            interval_function.block_last_run = block
 
-            logger.info("Running interval function  %s", func.__name__)
-            try:
-                timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
-                func(session, indx, block, timestamp)
-            except IntegrityError as e:
-                logger.error(
-                    "Could not process stats on block %s",
-                    block,
-                )
-                logger.exception(e)
-                session.rollback()
-                continue
+            # Run for at most an interval of 24 hours (or 6400 blocks)
+            interval_end = block if force else function_last_run + interval
+            # TODO Create ranges so we can use for..in.. instead of while..
+
+            while (interval_end < block) or force:
+                interval_function.block_last_run = interval_end
+                logger.info(f"Running interval function {func.__name__} at block {interval_end}")
+                try:
+                    timestamp = get_block_timestamp(interval_end)
+                    func(session, indx, interval_end, timestamp)
+                    interval_end += interval
+                except IntegrityError as e:
+                    logger.error(
+                        "Could not process stats on block %s",
+                        interval_end,
+                    )
+                    logger.exception(e)
+                    session.rollback()
+                    continue
+
+                if force:
+                    break
 
     def index_events_time(self, session, indx, start_block, end_block):
         start = timer()

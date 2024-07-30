@@ -117,11 +117,19 @@ def get_event_logs_in_range(session, event: Type[ContractEvent], start_block: in
 def get_core_contract_token_values(block: int, token_id: int) -> dict:
     from settings import EVENTS_CACHE_URL
 
-    r = requests_retry_session(retries=1_000_000)
-    resp = r.get(f"{EVENTS_CACHE_URL}/core-contract-token-values?block={block}&token_id={token_id}")
+    resp = requests.get(f"{EVENTS_CACHE_URL}/core-contract-token-values?block={block}&token_id={token_id}")
     resp.raise_for_status()
 
     return resp.json()
+
+
+def get_block_timestamp(block: int) -> dict:
+    from settings import EVENTS_CACHE_URL
+
+    resp = requests.get(f"{EVENTS_CACHE_URL}/block-timestamps?block={block}")
+    resp.raise_for_status()
+
+    return resp.json()["timestamp"]
 
 
 def requests_retry_session(

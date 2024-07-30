@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from sqlalchemy import Column, Integer, String, desc
 from sqlalchemy.dialects.postgresql import BIGINT, NUMERIC, TIMESTAMP
@@ -20,18 +20,6 @@ class StakingPositions(Base):
     usdc = Column(NUMERIC(78), nullable=False)
     sher = Column(NUMERIC(78), nullable=False)
     restake_count = Column(Integer, nullable=False, default=0, server_default="0")
-
-    @staticmethod
-    def get_for_factor(session):
-        # Get biggest USDC position that is not about to expire
-        safe_time = datetime.utcnow() + timedelta(days=7)
-
-        return (
-            session.query(StakingPositions)
-            .filter(StakingPositions.lockup_end > safe_time)
-            .order_by(desc(StakingPositions.usdc))
-            .first()
-        )
 
     @staticmethod
     def get_oldest_position(session):
