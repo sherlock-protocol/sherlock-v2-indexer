@@ -215,17 +215,14 @@ class Indexer:
                 accumulated_tvc_for_block += protocol_tvl
 
                 # Compute protocol external coverage
-                external_coverage = None
-                if (
-                    now < settings.HARDCODED_PROTOCOL_EXTERNAL_COVERAGE_END_DATE
-                    and protocol_id in settings.HARDCODED_PROTOCOL_EXTERNAL_COVERAGE
-                ):
-                    # Use hardcoded protocol external coverage value
-                    for start_date, amount in settings.HARDCODED_PROTOCOL_EXTERNAL_COVERAGE[protocol_id].items():
-                        if now >= start_date:
-                            external_coverage = Decimal(amount) * Decimal("1000000")
-
-                if not external_coverage:
+                external_coverage = Decimal("0")
+                if now < settings.HARDCODED_PROTOCOL_EXTERNAL_COVERAGE_END_DATE:
+                    if protocol_id in settings.HARDCODED_PROTOCOL_EXTERNAL_COVERAGE:
+                        # Use hardcoded protocol external coverage value
+                        for start_date, amount in settings.HARDCODED_PROTOCOL_EXTERNAL_COVERAGE[protocol_id].items():
+                            if now >= start_date:
+                                external_coverage = Decimal(amount) * Decimal("1000000")
+                else:
                     # Compute external coverage value based on on-chain values
                     nonstakers_fee = protocol.current_nonstakers.nonstakers / Decimal(1e18)
                     sherlock_fee = Decimal("0.1")

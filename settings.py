@@ -282,7 +282,7 @@ HARDCODED_PROTOCOL_EXTERNAL_COVERAGE = {
     # Arcadia
     "0x364b312cb168b38be075f9a08d64d767290ee94c117be39b2916328be8193b6c": OrderedDict(
         {
-            datetime(2024, 4, 3): 750_000,
+            datetime(2024, 4, 4): 750_000,
         }
     ),
 }
