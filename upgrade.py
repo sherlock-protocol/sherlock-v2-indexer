@@ -116,7 +116,7 @@ def reindex(connection: Connection):
     logger.info("[+] Indexing until up to date with live indexer")
 
     # We instantiate an indexer that processes chunks of 2k blocks
-    indexer = Indexer(blocks_per_call=2000)
+    indexer = Indexer()
     thread = Thread(name="Indexer", target=indexer.start)
     thread.start()
 

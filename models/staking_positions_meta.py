@@ -4,8 +4,8 @@ from datetime import datetime
 from sqlalchemy import Column, Integer
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 
-import settings
 from models.base import Base
+from utils import get_block_timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class StakingPositionsMeta(Base):
     @staticmethod
     def update(session, block, balance_factor):
         logger.info("Updating staking positions' balances with factor %s", balance_factor)
-        timestamp = settings.WEB3_WSS.eth.get_block(block)["timestamp"]
+        timestamp = get_block_timestamp(block)
 
         session.execute(
             "update staking_positions set usdc = usdc * :factor;",

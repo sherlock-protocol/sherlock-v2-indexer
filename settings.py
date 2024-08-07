@@ -1,6 +1,8 @@
 import csv
 import json
 import os
+from collections import OrderedDict
+from datetime import datetime
 from logging import Formatter, StreamHandler, getLogger
 
 from concurrent_log_handler import ConcurrentRotatingFileHandler
@@ -8,7 +10,6 @@ from decouple import Csv, config
 from sqlalchemy import create_engine
 from web3 import Web3, WebsocketProvider
 from web3.middleware import geth_poa_middleware
-from collections import OrderedDict
 
 API_HOST = config("API_HOST", default="127.0.0.1")
 API_PORT = config("API_PORT", default=5000, cast=int)
@@ -29,6 +30,9 @@ DB = create_engine(
 WEB3_WSS = Web3(WebsocketProvider(config("WEB3_PROVIDER_WSS"), websocket_timeout=180))
 if "goerli" in config("WEB3_PROVIDER_WSS"):
     WEB3_WSS.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+# Events Cache URL
+EVENTS_CACHE_URL = config("EVENTS_CACHE_URL")
 
 # Repo location on system
 REPO = config("SHERLOCK_V2_CORE_PATH")
@@ -86,12 +90,7 @@ MERKLE_DISTRIBUTORS_WSS = [
 INDEXER_BLOCKS_PER_CALL = 5
 INDEXER_STATS_BLOCKS_PER_CALL = 6400
 INDEXER_SLEEP_BETWEEN_CALL = config("INDEXER_SLEEP_BETWEEN_CALL", default=5.0, cast=float)
-
-# block to fee
-FEE = OrderedDict({
-    17543991: 0.225,
-    0: 0.0,
-})
+INDEXER_START_BLOCK = config("INDEXER_START_BLOCK", cast=int, default=14310144)
 
 # Will be used to flag the last position ID that get's 15% apy
 LAST_POSITION_ID_FOR_15PERC_APY = config("LAST_POSITION_ID_FOR_15PERC_APY", cast=int, default=10000000000000)
@@ -101,11 +100,14 @@ with open("./meta/protocols.csv", newline="") as csv_file:
     PROTOCOLS_CSV = list(csv.DictReader(csv_file))
 
     # Checksum addresses
-    PROTOCOLS_CSV = [{
-        **entry,
-        "agent": Web3.toChecksumAddress(entry["agent"]),
-        "premium_float": float(entry["premium"].replace("%", "")) / 100 if len(entry["premium"]) != 0 else None
-    } for entry in PROTOCOLS_CSV]
+    PROTOCOLS_CSV = [
+        {
+            **entry,
+            "agent": Web3.toChecksumAddress(entry["agent"]),
+            "premium_float": float(entry["premium"].replace("%", "")) / 100 if len(entry["premium"]) != 0 else None,
+        }
+        for entry in PROTOCOLS_CSV
+    ]
 
 # Protocols TVL history
 with open("./meta/tvl_history.csv", newline="") as csv_file:
@@ -153,9 +155,7 @@ if os.path.exists(MAPLE_APY_HISTORY_CSV_NAME):
         MAPLE_APY_HISTORY_CSV = list(csv.DictReader(csv_file))
 
         for entry in MAPLE_APY_HISTORY_CSV:
-            APY_HISTORY_MAPLE.append(
-                {"timestamp": int(entry["timestamp"]), "value": float(entry["apy"])}
-            )
+            APY_HISTORY_MAPLE.append({"timestamp": int(entry["timestamp"]), "value": float(entry["apy"])})
 else:
     # Write CSV header if file is new
     with open(MAPLE_APY_HISTORY_CSV_NAME, "w+") as csv_file:
@@ -163,6 +163,130 @@ else:
 
 
 USDC_INCENTIVES_PROTOCOL = "0x47a46b3628edc31155b950156914c27d25890563476422202887ed4298fc3c98"
+
+# EXTERNAL COVERAGE
+# ------------------------------------------------------------------------------
+HARDCODED_TOTAL_EXTERNAL_COVERAGE = OrderedDict(
+    {
+        datetime(2022, 11, 17): 8_237_500,
+        datetime(2022, 12, 18): 7_512_500,
+        datetime(2023, 1, 20): 7_075_875,
+        datetime(2023, 2, 23): 8_657_500,
+        datetime(2023, 3, 22): 4_293_075,
+        datetime(2023, 4, 21): 4_850_000,
+    }
+)
+HARDCODED_TOTAL_EXTERNAL_COVERAGE_END_DATE = datetime(2023, 5, 19)
+HARDCODED_PROTOCOL_EXTERNAL_COVERAGE = {
+    # Squeeth by Opyn
+    "0x99b8883ea932491b57118762f4b507ebcac598bee27b98f443c06d889237d9a4": OrderedDict(
+        {
+            datetime(2023, 5, 19): 750_000,
+            datetime(2023, 10, 20): 510_000,
+            datetime(2023, 11, 20): 422_534,
+            datetime(2024, 6, 17): 651_359,
+        }
+    ),
+    # Sentiment
+    "0x5af5b22283e35ef9d9d4a32753014cdc40fd7a5a5d920d83d2c1e901c10a0a7c": OrderedDict(
+        {
+            datetime(2023, 5, 19): 750_000,
+        }
+    ),
+    # Lyra Newport
+    "0x60ad05ee84333895c49c1ea7890a2576925e4e809b716b715abc37865c554309": OrderedDict(
+        {
+            datetime(2023, 5, 19): 750_000,
+            datetime(2023, 6, 19): 375_000,
+            datetime(2023, 11, 20): 420_000,
+        }
+    ),
+    # Perennial
+    "0x60dee29c004aa336ef555e6cfce86038a3e604dbf18852d98310112964b12048": OrderedDict(
+        {
+            datetime(2023, 5, 19): 750_000,
+            datetime(2023, 10, 20): 510_000,
+            datetime(2023, 11, 20): 422_534,
+            datetime(2024, 6, 17): 651_359,
+        }
+    ),
+    # LiquiFi
+    "0xeae496e133d5a5216d30ca085cc88546283c6567e787523dcd439c33d09f9862": OrderedDict(
+        {
+            datetime(2023, 5, 19): 750_000,
+            datetime(2023, 10, 20): 510_000,
+            datetime(2023, 11, 20): 422_534,
+        }
+    ),
+    # Lyra Avalon
+    "0x9c832ff12f1059a111aeb390ae646e686435ffa13c2bdc61d499758b85c1a716": OrderedDict(
+        {
+            datetime(2023, 5, 19): 750_000,
+        }
+    ),
+    # Buffer Finance
+    "0x850c0962cff040fb352c8273518960d0c5ce60c961a1a01180a51e05fcf9403e": OrderedDict(
+        {
+            datetime(2023, 5, 19): 691_959,
+        }
+    ),
+    # Hook
+    "0x7141e52f1187d2baa72e449b5470b3cd2b2cfe77ccade306ff9bcadf941a7a8d": OrderedDict(
+        {
+            datetime(2023, 5, 19): 93_750,
+            datetime(2023, 11, 20): 105_000,
+        }
+    ),
+    # Holyheld
+    "0xb544040099f1bc2a2592d756f8b36e66e213049b312844459226271402cd854c": OrderedDict(
+        {
+            datetime(2023, 5, 19): 18_750,
+        }
+    ),
+    # Union Finance
+    "0xd883fd72e18db3cd7aeadfb568489425d6b342ed705040c200f145caa73ce603": OrderedDict(
+        {
+            datetime(2023, 5, 19): 75_000,
+            datetime(2023, 7, 20): 33_750,
+            datetime(2023, 8, 20): 34_997,
+            datetime(2023, 9, 20): 31_807,
+            datetime(2023, 11, 20): 35_624,
+            datetime(2024, 3, 24): 43_459,
+            datetime(2024, 6, 9): 126_000,
+        }
+    ),
+    # OpenQ
+    "0xd55fb2e557617b0f82ec70e70db577fa9aa52212b4b539d4ed5b947f08d7d23f": OrderedDict(
+        {
+            datetime(2023, 5, 19): 67_125,
+        }
+    ),
+    # Ajna
+    "0x311378546a9b2d446c7eef43258f16d09348109c57b9fc6220adcea57014c204": OrderedDict(
+        {
+            datetime(2023, 7, 20): 750_000,
+            datetime(2023, 10, 20): 510_000,
+            datetime(2023, 11, 20): 422_534,
+        }
+    ),
+    # Teller
+    "0x34a4bbea85db417e21bb6e43a826a4a25c5f999a1b18aa2c32ff1b58a3f181f9": OrderedDict(
+        {
+            datetime(2023, 7, 20): 112_500,
+            datetime(2023, 9, 20): 487_500,
+            datetime(2023, 11, 20): 422_534,
+            datetime(2024, 3, 29): 2_624_000,
+            datetime(2024, 6, 10): 2_848_000,
+        }
+    ),
+    # Arcadia
+    "0x364b312cb168b38be075f9a08d64d767290ee94c117be39b2916328be8193b6c": OrderedDict(
+        {
+            datetime(2024, 4, 4): 750_000,
+        }
+    ),
+}
+HARDCODED_PROTOCOL_EXTERNAL_COVERAGE_END_DATE = datetime(2024, 7, 2)
 
 # LOGGING
 # ------------------------------------------------------------------------------

@@ -1,10 +1,15 @@
 import logging
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy.dialects.postgresql import NUMERIC, TIMESTAMP
+from sqlalchemy.orm import relationship
 
 from models.base import Base
+
+if TYPE_CHECKING:
+    from models.protocol_nonstakers import ProtocolNonstakers
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +23,11 @@ class Protocol(Base):
     coverage_ended_at = Column(TIMESTAMP)
     tvl = Column(NUMERIC(78), nullable=True)
 
+    nonstakers = relationship("ProtocolNonstakers", back_populates="protocol", lazy="dynamic")
+
     @staticmethod
-    def parse_bytes_id(bytes):
-        return "0x" + bytes.hex()
+    def parse_bytes_id(bytes_id):
+        return "0x" + (bytes_id.hex() if isinstance(bytes_id, bytes) else bytes_id)
 
     @staticmethod
     def get(session, bytes_id):
@@ -74,3 +81,9 @@ class Protocol(Base):
             "coverage_ended_at": int(self.coverage_ended_at.timestamp()) if self.coverage_ended_at else None,
             "tvl": self.tvl,
         }
+
+    @property
+    def current_nonstakers(self) -> "ProtocolNonstakers":
+        from models.protocol_nonstakers import ProtocolNonstakers
+
+        return self.nonstakers.order_by(ProtocolNonstakers.nonstakers_set_at.desc()).first()

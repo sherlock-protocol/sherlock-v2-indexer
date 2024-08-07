@@ -1,2 +1,23 @@
-[tool.black]
+[tool.ruff]
 line-length = 120
+target-version = "py38"
+
+[tool.ruff.lint]
+# E- pycodestyle
+# F - Pyflakes
+# B - bugbear
+# C4 - comprehensions
+# I - isort
+# N - pep8-naming
+# S - bandit
+select = ["E", "F", "I", "N"]
+
+# F405 - {name} may be undefined, or defined from star imports
+# E401 - Multiple imports on one line
+ignore = ["F405"]
+
+[tool.ruff.lint.per-file-ignores]
+# F401 - {name} imported but unused
+# F403 - from {name} import * used; unable to detect undefined names
+# S101 - use of `assert` detected
+"**/__init__.py" = ["F401", "F403"]

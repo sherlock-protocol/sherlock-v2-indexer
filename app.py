@@ -1,7 +1,6 @@
 import atexit
 import signal
 import sys
-from threading import Thread
 
 import sentry  # noqa
 import settings
@@ -27,9 +26,9 @@ def interrupt():
 
 
 def create_indexer():
-    thread = Thread(name="Indexer started", target=indexer.start)
-    threads.append(thread)
-    thread.start()
+    # thread = Thread(name="Indexer started", target=indexer.start)
+    # threads.append(thread)
+    # thread.start()
 
     signal.signal(signal.SIGINT, signal_handler)
     atexit.register(interrupt)

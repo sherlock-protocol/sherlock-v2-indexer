@@ -1,12 +1,12 @@
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from sqlalchemy import Column, Integer, String, desc
 from sqlalchemy.dialects.postgresql import BIGINT, NUMERIC, TIMESTAMP
 
-import settings
 from models.base import Base
+from utils import get_core_contract_token_values
 
 logger = logging.getLogger(__name__)
 
@@ -22,18 +22,6 @@ class StakingPositions(Base):
     restake_count = Column(Integer, nullable=False, default=0, server_default="0")
 
     @staticmethod
-    def get_for_factor(session):
-        # Get biggest USDC position that is not about to expire
-        safe_time = datetime.utcnow() + timedelta(days=7)
-
-        return (
-            session.query(StakingPositions)
-            .filter(StakingPositions.lockup_end > safe_time)
-            .order_by(desc(StakingPositions.usdc))
-            .first()
-        )
-
-    @staticmethod
     def get_oldest_position(session):
         return (
             session.query(StakingPositions)
@@ -45,11 +33,11 @@ class StakingPositions(Base):
     @staticmethod
     def insert(session, block, id, owner):
         logger.info("Saving staking position #%s for %s", id, owner)
-        lockup_end = settings.CORE_WSS.functions.lockupEnd(id).call(block_identifier=block)
+        token_values = get_core_contract_token_values(block=block, token_id=id)
 
-        usdc = settings.CORE_WSS.functions.tokenBalanceOf(id).call(block_identifier=block)
-
-        sher = settings.CORE_WSS.functions.sherRewards(id).call(block_identifier=block)
+        lockup_end = token_values["lockup_end"]
+        usdc = int(token_values["usdc"])
+        sher = int(token_values["sher"])
 
         s = StakingPositions()
         s.id = id
@@ -84,9 +72,10 @@ class StakingPositions(Base):
             return
 
         # Update staking position with latest blockchain data
-        lockup_end = settings.CORE_WSS.functions.lockupEnd(id).call(block_identifier=block)
-        usdc = settings.CORE_WSS.functions.tokenBalanceOf(id).call(block_identifier=block)
-        sher = settings.CORE_WSS.functions.sherRewards(id).call(block_identifier=block)
+        token_values = get_core_contract_token_values(block=block, token_id=id)
+        lockup_end = token_values["lockup_end"]
+        usdc = int(token_values["usdc"])
+        sher = int(token_values["sher"])
 
         position.lockup_end = datetime.fromtimestamp(lockup_end)
         position.usdc = usdc
@@ -95,7 +84,8 @@ class StakingPositions(Base):
         position.restake_count += 1
 
     def get_balance_data(self, block):
-        usdc = settings.CORE_WSS.functions.tokenBalanceOf(self.id).call(block_identifier=block)
+        token_values = get_core_contract_token_values(block=block, token_id=self.id)
+        usdc = int(token_values["usdc"])
 
         factor = usdc / self.usdc
         return usdc, factor
