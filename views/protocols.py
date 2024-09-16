@@ -8,21 +8,26 @@ def get_protocol_metadata(bytes_id):
     return next(filter(lambda m: m["id"] == bytes_id, settings.PROTOCOLS_CSV), {})
 
 
+class dummy:
+    def to_dict(*x,):
+        return {}
+
 @app.route("/protocols")
 def get_protocols():
     with Session() as s:
         protocols = (
-            s.query(ProtocolPremium, Protocol)
-            .join(Protocol, Protocol.id == ProtocolPremium.protocol_id)
-            .distinct(ProtocolPremium.protocol_id)
+            s.query(Protocol, ProtocolPremium)
+            .join(ProtocolPremium, isouter=True)
+            .distinct(Protocol.id)
             .order_by(
-                ProtocolPremium.protocol_id,
+                Protocol.id,
                 ProtocolPremium.premium_set_at.desc(),
             )
             .all()
         )
-
-        premiums, protocols = zip(*protocols) if len(protocols) > 0 else ((), ())
+        protocols, premiums = zip(*protocols) if len(protocols) > 0 else ((), ())
+        # Return empty class for protocol without premium
+        premiums = [dummy() if p is None else p for p in premiums]
         coverages = [ProtocolCoverage.get_protocol_coverages(s, protocol.id) for protocol in protocols]
     return {
         "ok": True,
