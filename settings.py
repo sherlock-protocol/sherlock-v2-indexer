@@ -18,7 +18,10 @@ API_DEBUG = config("API_DEBUG", default=False, cast=bool)
 DB_USER = config("DB_USER")
 DB_PASS = config("DB_PASS")
 DB_PORT = config("DB_PORT")
-DB_NAME = config("DB_NAME")
+if os.environ.get('PYTEST_CURRENT_TEST'):
+    DB_NAME = config("DB_NAME_TEST", default='indexer_test')
+else:
+    DB_NAME = config("DB_NAME")
 
 DATABASE_URI = "postgresql+psycopg2://{}:{}@localhost:{}/{}".format(DB_USER, DB_PASS, DB_PORT, DB_NAME)
 DB = create_engine(
@@ -98,6 +101,10 @@ LAST_POSITION_ID_FOR_15PERC_APY = config("LAST_POSITION_ID_FOR_15PERC_APY", cast
 # Protocols (from local csv file, kept in memory)
 with open("./meta/protocols.csv", newline="") as csv_file:
     PROTOCOLS_CSV = list(csv.DictReader(csv_file))
+
+    # Remove as it conflicts with "premium" when rendering /protocols
+    for entry in PROTOCOLS_CSV:
+        del entry["premium"]
 
     # Checksum addresses
     PROTOCOLS_CSV = [
